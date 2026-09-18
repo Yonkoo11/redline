@@ -6,12 +6,13 @@
 [![tests](https://github.com/Yonkoo11/redline/actions/workflows/tests.yml/badge.svg)](https://github.com/Yonkoo11/redline/actions/workflows/tests.yml)
 ![runtime](https://img.shields.io/badge/Hermes_runtime_dispatch-4%2F4_cases_pass-121212)
 ![tape](https://img.shields.io/badge/on--chain_refusal-devnet_1%2F1_confirmed-121212)
+[![live](https://img.shields.io/badge/live-yonkoo11.github.io%2Fredline-3fb950)](https://yonkoo11.github.io/redline/)
 
 ### Kill switch for claw traders.
 
 **Redline is a Hermes plugin that holds a ClawPump trading agent under a policy its operator wrote. Every order the agent tries passes the policy or is refused, and a refusal is written to Solana as a memo carrying the record's hash. Today: 17 refusal rules tested, the real Hermes runtime dispatching through it, and one refusal confirmed on Solana devnet.**
 
-**[ Verify it yourself ↗ ](#verify-it-yourself-in-60-seconds)** · **[ The devnet receipt ↗ ](https://solscan.io/tx/5SaG128xvD4GiW7CCaJRZrGtwBD2paNf9iKWuvoHELfV2u9XjkvKCYBPHRhqYFPrzuPn5SsGNH6mVFSJdieNMZfQ?cluster=devnet)** · **[ @useredline ↗ ](https://x.com/useredline)**
+**[ Live ↗ ](https://yonkoo11.github.io/redline/)** · **[ Verify it yourself ↗ ](#verify-it-yourself-in-60-seconds)** · **[ The devnet receipt ↗ ](https://solscan.io/tx/5SaG128xvD4GiW7CCaJRZrGtwBD2paNf9iKWuvoHELfV2u9XjkvKCYBPHRhqYFPrzuPn5SsGNH6mVFSJdieNMZfQ?cluster=devnet)** · **[ @useredline ↗ ](https://x.com/useredline)**
 
 Built for The AnsemHack Clawrena (ClawPump × pump.fun, Inference Markets).
 
@@ -21,7 +22,7 @@ Built for The AnsemHack Clawrena (ClawPump × pump.fun, Inference Markets).
 
 ## The tape page
 
-*What the still shows: the shell that is live today. Policy on the left, an empty tape on the right, and a status line that says no mainnet transaction exists yet.*
+*What the still shows: the shell that is live today at [yonkoo11.github.io/redline](https://yonkoo11.github.io/redline/). Policy on the left, an empty tape on the right, and a status line that says no mainnet transaction exists yet.*
 
 | desktop, 1280 wide | phone, 390 wide |
 |---|---|
