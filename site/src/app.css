@@ -1,0 +1,3 @@
+:root{--bg:#0c0d0f;--panel:#131417;--ink:#f4f3ef;--mute:#9a9da4;--red:#e03a2f;--line:#26282d;font-family:"Barlow Semi Condensed",system-ui,-apple-system,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink)}
+a{color:inherit}

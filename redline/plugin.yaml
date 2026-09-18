@@ -1,0 +1,5 @@
+name: redline
+version: 0.1.0
+description: Kill switch for claw traders. Holds a ClawPump agent under a signed trade policy; refusals are posted on Solana.
+provides_hooks:
+  - pre_tool_call
