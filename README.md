@@ -209,6 +209,7 @@ the refusal cool-down, so observing cannot trip a limit that only enforcing shou
 | Capability | Status |
 |---|---|
 | **Policy engine** | Real. 38 unit tests, `tests/test_policy.py`, run in CI. |
+| **Stress tested against itself** | Real, 2026-09-19. 88 tests, including an adversarial suite (disguised tool names, NaN and negative and overflowing sizes, salami-sliced orders, boundary values) and a resilience suite (corrupt state, corrupt policy, unwritable home, a log that throws, a price source that dies, twelve parallel calls, a 400-call run). Four bypasses were found and closed, each one named in [INVARIANTS.md](INVARIANTS.md). |
 | **Installing it from scratch** | Real. Verified 2026-09-19 by installing from GitHub into an empty Hermes home: the scan passes, `hermes plugins validate` passes, `redline sign keygen` produces a key, a signed policy verifies, and changing one number in it makes the check fail. |
 | **Operator signatures** | Real. Ed25519 over the canonical policy; an altered policy refuses everything. `OperatorSignature` and `UnknownFields` in the suite. |
 | **Watching before enforcing** | Real. `ShadowMode` in the suite, and one watched order is on the public tape. |
