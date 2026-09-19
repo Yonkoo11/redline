@@ -88,4 +88,9 @@ await shot("shot-6-hold", async (page) => {
   await page.waitForTimeout(15000);
 });
 
+// No vertical social clip. Playwright records the page at CSS pixels and pads the rest of the
+// frame, so a 1080x1920 request put a 390-wide phone layout in the corner of a grey canvas.
+// Cropping the real region and upscaling it 2.8x to 1080 wide is visibly soft on type, and a
+// soft asset is worse than no asset. The 1920x1080 cut plays fine in an X timeline.
+
 await browser.close();

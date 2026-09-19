@@ -11,6 +11,7 @@ because the waiting in it is the evidence.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -30,8 +31,28 @@ def run(args: list[str]) -> str:
 
 
 def duration(path: Path) -> float:
-    return float(run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                      "-of", "default=noprint_wrappers=1:nokey=1", str(path)]).strip())
+    """How long a clip runs, whatever the container admits to.
+
+    Chrome writes webm without a duration in the container, so `format=duration` comes back as
+    N/A and float() throws. The stream usually knows; when it does not, decoding the file and
+    reading the last timestamp always does, and seven short clips are cheap to decode.
+    """
+    for entries in ("format=duration", "stream=duration"):
+        out = run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", entries,
+                   "-of", "default=noprint_wrappers=1:nokey=1", str(path)]).strip().split("\n")[0]
+        try:
+            value = float(out)
+            if value > 0:
+                return value
+        except ValueError:
+            pass
+    p = subprocess.run(["ffmpeg", "-i", str(path), "-f", "null", "-"],
+                       capture_output=True, text=True)
+    stamps = re.findall(r"time=(\d+):(\d+):(\d+\.\d+)", p.stderr)
+    if not stamps:
+        raise SystemExit(f"cannot determine the length of {path}")
+    h, m, sec = stamps[-1]
+    return int(h) * 3600 + int(m) * 60 + float(sec)
 
 
 def render_cast(cast: Path) -> Path:
