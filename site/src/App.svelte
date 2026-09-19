@@ -6,6 +6,8 @@
   const SOL = "So11111111111111111111111111111111111111112";
   const REST = -42, HARD = 64;
 
+  // The home page carries the most recent verdicts; /log/ is the full reader.
+  const SHOWN = 8;
   let tape = $state([]);
   let policy = $state(null);
 
@@ -141,10 +143,10 @@
   </section>
 
   <div class="section-head">
-    <h2>The tape</h2><span class="lbl">every order judged, newest first</span>
+    <h2>The tape</h2><span class="lbl">newest first. only refusals get a receipt</span>
   </div>
 
-  {#each tape as r}
+  {#each tape.slice(0, SHOWN) as r}
     <div class="rec" class:refused={!r.allowed} class:watched={r.would_refuse}
          class:operator={isOperator(r)}>
       <span class="verdict" class:refused={!r.allowed && !isOperator(r)}
@@ -163,12 +165,16 @@
       <div class="side">
         {#if r.memo_sig}
           <a class="receipt" href={`https://solscan.io/tx/${r.memo_sig}`}>{short(r.memo_sig)} ↗</a>
-        {:else}
-          {#if !r.would_refuse}<span class="lbl">no receipt, only refusals are written</span>{/if}
         {/if}
       </div>
     </div>
   {/each}
+
+  {#if tape.length > SHOWN}
+    <a class="more" href="./log/">
+      Read all {tape.length} verdicts, with the reason for each <span aria-hidden="true">→</span>
+    </a>
+  {/if}
 
   <div class="section-head">
     <h2>The policy</h2><span class="lbl">signed by the operator, enforced on every call</span>
@@ -305,6 +311,13 @@
   .why{color:var(--ink-2);font-size:14px;line-height:1.45;margin-top:4px}
   .meta{font-size:13px;color:var(--ink-3);margin-top:var(--s2);display:flex;gap:var(--s3);flex-wrap:wrap;font-variant-numeric:tabular-nums;min-width:0}
   .meta span{min-width:0;overflow-wrap:anywhere}
+
+  .more{display:inline-block;margin-top:var(--s5,20px);padding:var(--s3) 0;
+        font:600 14px/1.3 "IBM Plex Mono",monospace;color:var(--ink);text-decoration:none;
+        border-bottom:2px solid var(--red);
+        transition:color var(--t-fast) var(--ease)}
+  @media(hover:hover){.more:hover{color:var(--red)}}
+  .more:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(224,58,47,.35);border-radius:var(--r-sm)}
 
   .receipt{font:500 13px/1 "IBM Plex Mono",monospace;letter-spacing:.04em;text-decoration:none;
     border-bottom:1px solid var(--red);padding-bottom:2px;white-space:nowrap;

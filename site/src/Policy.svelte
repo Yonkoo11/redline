@@ -292,7 +292,7 @@
   .field{padding:var(--s4) 0;border-bottom:1px solid var(--rule-soft)}
   label,.lbl2{display:block;font-size:14px;color:var(--ink);margin-bottom:var(--s2)}
   .inputRow{display:flex;align-items:baseline;gap:var(--s3)}
-  .inputRow input{flex:0 0 190px;width:190px}
+  .inputRow input{flex:0 1 190px;width:190px;min-width:0}
   input[type="number"],textarea{
     min-width:0;padding:var(--s3);border:1px solid var(--rule);border-radius:var(--r-sm);
     background:var(--paper-2);color:var(--ink);font:600 16px/1.3 "IBM Plex Mono",monospace;
@@ -350,7 +350,7 @@
 
   @media (max-width:900px){
     .presets{grid-template-columns:1fr}
-    .split{grid-template-columns:1fr;gap:var(--s6)}
+    .split{grid-template-columns:minmax(0,1fr);gap:var(--s6)}
     .preview{position:static}
   }
 </style>
