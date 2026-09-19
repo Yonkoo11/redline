@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-19T07:54:40.811Z",
+ "generated_at": "2026-09-19T07:56:30.941Z",
  "source": "live agent tape",
  "policy": {
   "max_trade_pct_equity": 10,
@@ -204,6 +204,59 @@
    "tool": "mcp_clawpump_swap_execute",
    "ts": 1789804372,
    "written_at": 1789804380
+  },
+  {
+   "allowed": true,
+   "equity_source": "live",
+   "equity_usd": 16.03,
+   "policy_verified": true,
+   "reason": "operator declared the fall from $17.02 to $16.03 an outflow, not a trading loss",
+   "rule": "day_reset",
+   "tool": "operator:day_reset",
+   "ts": 1789804557
+  },
+  {
+   "allowed": false,
+   "equity_source": "live",
+   "equity_usd": 16.03,
+   "hash": "aaf50532a02b6daa9fe3a87065af6cf622fcee544667ec0d74f8dfe617107664",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 14.426373969779492,
+    "token": "SOL"
+   },
+   "memo_sig": "5Sv6ff6fa5fk3upbm6hBJdCssvoDxhRJWwQ2J3wxGM2MVW3cUc6nFahhJrqhj3ZoMdgoh3ASfiRY68Y8F9rFvWvj",
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "notional $14.43 > cap $1.60 (10.0% of equity)",
+   "rule": "trade_cap",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789804565,
+   "written_at": 1789804573
+  },
+  {
+   "allowed": true,
+   "equity_source": "live",
+   "equity_usd": 16.03,
+   "hash": "67bff8a3d13c9b97f82bdf0de5411a5139825d5a4690e35724a096ceae0067f5",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 0.8015452350328002,
+    "token": "SOL"
+   },
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "within policy",
+   "rule": "",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789804573,
+   "written_at": 1789804576
   }
  ]
 }
