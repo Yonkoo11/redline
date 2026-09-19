@@ -2,7 +2,7 @@
 from __future__ import annotations
 import os, time
 from pathlib import Path
-from .policy import Policy, State, evaluate, record_refusal
+from .policy import Policy, State, evaluate, governed_kind, record_refusal
 from .intent import intent_from_call
 
 HOME = Path(os.environ.get("REDLINE_HOME", Path.home() / ".hermes" / "redline"))
@@ -51,7 +51,43 @@ def _equity():
 
 
 def pre_tool_call(tool_name: str, args: dict, task_id: str = "", **kwargs):
-    """Hermes hook. Returns None to allow, or {"action": "block", "message": ...} to refuse."""
+    """Hermes hook. Returns None to allow, or {"action": "block", "message": ...} to refuse.
+
+    This wrapper is the difference between a guardrail and a decoration. Measured against the
+    installed runtime on 2026-09-19: when this callback raises, Hermes logs
+    `Hook 'pre_tool_call' callback pre_tool_call raised: ...` and **lets the tool call through**.
+    Writing one broken byte into the state file was enough to do it, and that file sits in a
+    directory the agent's own process can write. So an agent able to run a shell command could
+    disable every limit and then trade freely.
+
+    Nothing below may escape. An error on a money-moving tool refuses; an error while looking at a
+    tool that cannot move value allows, because blocking every read on a bad argument would be its
+    own kind of damage.
+    """
+    try:
+        if governed_kind(tool_name) is None:
+            return None                      # pure string work, touches no disk and no network
+    except Exception:
+        pass                                 # even that failed: fall through and refuse
+
+    try:
+        return _decide(tool_name, args, task_id, **kwargs)
+    except Exception as exc:
+        reason = f"{type(exc).__name__}: {exc}"
+        try:
+            if _tape:
+                _tape({"ts": int(time.time()), "tool": tool_name, "allowed": False,
+                       "rule": "internal_error", "reason": reason,
+                       "equity_usd": None, "equity_source": _equity_source,
+                       "policy_verified": False, "mode": "enforce"})
+        except Exception:
+            pass                             # the record must never be why the refusal is lost
+        return {"action": "block",
+                "message": f"REDLINE refused (internal_error): {reason}. "
+                           f"Redline could not make a decision, so it made the safe one."}
+
+
+def _decide(tool_name: str, args: dict, task_id: str = "", **kwargs):
     intent = intent_from_call(tool_name, args, _price_reader)
     if intent is None:
         return None
@@ -74,6 +110,8 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str = "", **kwargs):
         # What the operator is watching for: the order that would have been stopped.
         record["would_refuse"] = True
         record["allowed"] = True
+    if verdict.allowed and intent.notional_usd:
+        state.day_notional_usd += intent.notional_usd     # only what actually went through
     if not verdict.allowed and not shadow:
         record_refusal(state, now)
     state.save(STATE_PATH)

@@ -1,30 +1,68 @@
 """Redline policy engine. Pure functions plus a small state store. Fails closed."""
 from __future__ import annotations
-import json, time
+import json, math, time
 from dataclasses import dataclass, field, fields, asdict
 from pathlib import Path
 from typing import Optional
 
 from .signing import verify_policy
 
+# Names checked against the live ClawPump MCP on 2026-09-19 (@clawpump/agents v0.1.27, 132 tools,
+# 61 of them not read-only). An earlier version of this map listed 8 names and let 15 money-moving
+# tools through, including one that pays an arbitrary URL an arbitrary amount from the wallet.
 GOVERNED = {
+    # trading
     "perps_order_execute": "perp",
+    "limit_order_create": "perp",
     "swap_execute": "swap",
-    "perps_collateral_withdraw": "withdraw",
+    "dca_create": "swap",
+    # funds leaving the wallet
     "wallet_transfer": "transfer",
     "transfer_sol": "transfer",
     "transfer_token": "transfer",
-    "dca_create": "swap",
-    "limit_order_create": "perp",
+    "perps_collateral_withdraw": "withdraw",
+    "agent_card_withdraw": "withdraw",
+    # funds leaving the *readable* wallet: the equity reader cannot see Phoenix collateral or a
+    # UsePod pod, so a deposit reads as a loss and moves value out of reach at the same time
+    "perps_collateral_deposit": "spend",
+    "usepod_deposit": "spend",
+    # arbitrary payments
+    "x402_pay": "spend",
+    "pay_sh_execute_approved": "spend",
+    "pay_sh_prepare_call": "spend",
+    # launches cost SOL
+    "launch_token_gasless": "spend",
+    "launch_metaplex_genesis_token": "spend",
 }
+
+# The platform ships 132 tools today and can ship more tomorrow, so an allowlist alone is always a
+# release behind. Anything whose name reads like it moves value and is not mapped above is treated
+# as an unpriceable spend, which the policy refuses. False positives are visible in the log and
+# cost one line in the policy's `ungoverned_allow`; a false negative costs the wallet.
+MONEY_WORDS = ("swap", "transfer", "send", "withdraw", "deposit", "order", "buy", "sell",
+               "trade", "stake", "launch", "bridge", "pay", "fund", "collateral", "liquidat")
+
+# Named exceptions: these appear money-shaped and return funds or move nothing.
+NOT_MONEY = ("dca_cancel", "limit_order_cancel", "perps_order_cancel", "withdraw_marketplace_bid",
+             "agent_mail_send", "predictions_close", "perps_trader_register")
+
+
+def bare_tool_name(tool_name: str) -> str:
+    """Strip any MCP prefix: mcp_clawpump_swap_execute -> swap_execute."""
+    return tool_name.split("_", 2)[-1] if tool_name.startswith("mcp_") else tool_name
 
 
 def governed_kind(tool_name: str) -> Optional[str]:
-    """Map a Hermes tool name (any MCP prefix) to a governed kind, or None."""
-    bare = tool_name.split("_", 2)[-1] if tool_name.startswith("mcp_") else tool_name
+    """Map a tool name to a governed kind, or None for tools that cannot move value."""
+    bare = bare_tool_name(tool_name)
     for suffix, kind in GOVERNED.items():
         if bare.endswith(suffix):
             return kind
+    if any(bare.endswith(x) for x in NOT_MONEY):
+        return None
+    low = bare.lower()
+    if any(w in low for w in MONEY_WORDS):
+        return "spend"          # unknown, money-shaped: priced as None, therefore refused
     return None
 
 
@@ -40,6 +78,15 @@ class Policy:
     allowed_destinations: list = field(default_factory=list)
     refusal_cooldown_count: int = 5
     refusal_cooldown_minutes: int = 30
+    # The ceiling on a payment that is not a trade: an x402 call, a pod top-up, a token launch,
+    # collateral moved out of the readable wallet. Deliberately small, because these tools take an
+    # arbitrary amount and send it somewhere this plugin cannot see.
+    max_spend_usd: float = 1.0
+    # Turnover, as a multiple of equity, allowed in one UTC day. Every individual order can sit
+    # inside the per-order cap while an agent in a loop cycles the account many times over and
+    # pays a fee on each pass. The daily loss limit only notices once the losses land; this
+    # notices the churn. Generous by default, because it is a runaway brake, not a strategy limit.
+    max_daily_notional_pct_equity: float = 300.0
     # "enforce" blocks a failing order. "shadow" judges and records it but lets it through, so a
     # new policy can be watched before it is trusted. Signed along with the limits.
     mode: str = "enforce"
@@ -86,6 +133,7 @@ class State:
     day_start_usd: float = 0.0
     day_key: str = ""
     refusals: list = field(default_factory=list)   # unix timestamps
+    day_notional_usd: float = 0.0                 # turnover allowed so far in this UTC day
     halted: bool = False
     halt_reason: str = ""
 
@@ -114,6 +162,7 @@ def roll_day(state: State, equity_usd: float, now: float) -> None:
     key = _day_key(now)
     if state.day_key != key:
         state.day_key, state.day_start_usd = key, equity_usd
+        state.day_notional_usd = 0.0
     state.high_water_usd = max(state.high_water_usd, equity_usd)
 
 
@@ -142,17 +191,26 @@ def evaluate(policy: Policy, state: State, intent: Intent,
     daily = 100.0 * (1 - equity_usd / state.day_start_usd) if state.day_start_usd else 0.0
     if daily >= policy.max_daily_loss_pct and intent.kind in ("perp", "swap"):
         return Verdict(False, f"daily loss {daily:.1f}% >= {policy.max_daily_loss_pct}%", "daily_loss")
-    return _size_and_scope(policy, intent, equity_usd)
+    return _size_and_scope(policy, state, intent, equity_usd)
 
 
-def _size_and_scope(policy: Policy, intent: Intent, equity_usd: float) -> Verdict:
+def _size_and_scope(policy: Policy, state: State, intent: Intent, equity_usd: float) -> Verdict:
     if intent.kind == "transfer":
         ok = intent.destination in policy.allowed_destinations
         return Verdict(ok, "destination allowed" if ok else f"destination {intent.destination} not on the allowlist", "destination")
     if intent.kind == "withdraw":
         return Verdict(False, "collateral withdrawals are operator-only", "withdraw")
     if intent.notional_usd is None:
+        if intent.kind == "spend":
+            return Verdict(False, "payment of an unreadable amount; refusing (fail closed)", "spend_unpriced")
         return Verdict(False, "could not price the order; refusing (fail closed)", "price")
+    # NaN compares false against every bound, so it would sail through each cap below and be
+    # reported as within policy. A negative size does the same and is meaningless besides. Both are
+    # reachable from tool arguments: float("nan") and float("-1") both parse.
+    if not math.isfinite(intent.notional_usd) or intent.notional_usd < 0:
+        return Verdict(False,
+                       f"notional {intent.notional_usd} is not a usable number; refusing (fail closed)",
+                       "bad_notional")
     if equity_usd < policy.equity_floor_usd:
         return Verdict(False, f"equity ${equity_usd:.2f} below floor ${policy.equity_floor_usd}", "floor")
     if intent.kind == "perp" and intent.market not in policy.allowed_markets:
@@ -161,9 +219,19 @@ def _size_and_scope(policy: Policy, intent: Intent, equity_usd: float) -> Verdic
         return Verdict(False, f"token {intent.token} not allowed", "token")
     if intent.leverage > policy.max_leverage:
         return Verdict(False, f"leverage {intent.leverage}x > {policy.max_leverage}x", "leverage")
+    if intent.kind == "spend" and intent.notional_usd > policy.max_spend_usd:
+        return Verdict(False,
+                       f"payment ${intent.notional_usd:.2f} > spend limit ${policy.max_spend_usd:.2f}",
+                       "spend_cap")
     cap = equity_usd * policy.max_trade_pct_equity / 100.0
     if intent.notional_usd > cap:
         return Verdict(False, f"notional ${intent.notional_usd:.2f} > cap ${cap:.2f} ({policy.max_trade_pct_equity}% of equity)", "trade_cap")
+    budget = equity_usd * policy.max_daily_notional_pct_equity / 100.0
+    if state.day_notional_usd + intent.notional_usd > budget:
+        return Verdict(False,
+                       f"today's turnover ${state.day_notional_usd:.2f} plus ${intent.notional_usd:.2f} "
+                       f"exceeds ${budget:.2f} ({policy.max_daily_notional_pct_equity}% of equity)",
+                       "daily_turnover")
     return Verdict(True, "within policy")
 
 

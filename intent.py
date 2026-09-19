@@ -20,6 +20,10 @@ _SYM_KEYS = ("market", "symbol", "pair", "asset")
 _SIZE_KEYS = ("notional_usd", "notional", "size_usd", "amount_usd")
 _BASE_KEYS = ("size", "amount", "base_amount", "quantity")
 _SWAP_IN_KEYS = ("input_mint", "input_token", "from_token")
+# A payment names its amount and sometimes its currency. Anything it does not name cannot be
+# priced, and an unpriceable payment is refused.
+_SPEND_USD_KEYS = ("amount_usd", "usd", "price_usd", "max_amount_usd")
+_SPEND_TOKEN_KEYS = ("token", "mint", "currency", "asset", "pay_with")
 
 # Smallest-unit decimals for every symbol swap_execute names in its own schema.
 # Anything absent here cannot be priced, so it is refused rather than guessed.
@@ -71,6 +75,21 @@ def intent_from_call(tool_name: str, args: dict, price: PriceFn) -> Optional[Int
         return Intent(kind, None, destination=str(_first(args, ("to", "destination", "recipient", "address")) or ""))
     if kind == "withdraw":
         return Intent(kind, None)
+    if kind == "spend":
+        usd = _first(args, _SPEND_USD_KEYS)
+        if usd is not None:
+            try:
+                return Intent(kind, float(usd))
+            except (TypeError, ValueError):
+                return Intent(kind, None)
+        sym = str(_first(args, _SPEND_TOKEN_KEYS) or "").upper() or None
+        amt = _first(args, _BASE_KEYS)
+        if sym and amt is not None:
+            # A payment amount is quoted in whole units by every payment tool checked on
+            # 2026-09-19, unlike a swap, which quotes the smallest unit.
+            return Intent(kind, _notional(args, sym, price, raw_units=False), token=sym)
+        return Intent(kind, None)
+
     swap_in = _first(args, _SWAP_IN_KEYS)
     sym = _symbol(args) or (str(swap_in).upper() if swap_in else None)
     lev = float(_first(args, ("leverage",)) or 1.0)

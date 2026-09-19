@@ -47,6 +47,41 @@
       do: "First check whether the fall was money you spent rather than money the agent lost. The limit compares equity now against equity at the start of the day, and it cannot see why equity moved, so a fee you paid, a transfer out or a withdrawal looks identical to a trading loss. Run the day command below. If it was an outflow, say so and the day rebaselines. Otherwise wait for the UTC day to roll.",
     },
     {
+      rule: "spend_cap",
+      says: "payment $X > spend limit $Y",
+      means: "Something asked to pay out rather than trade: an inference call, a pod top-up, a token launch, or collateral moved into an account Redline cannot read.",
+      does: "Refused before the payment left.",
+      do: "These tools take any amount and send it anywhere, which is why their limit is separate from the trading cap and small by default. Raise it deliberately, and only as far as you would be comfortable losing in one call.",
+    },
+    {
+      rule: "spend_unpriced",
+      says: "payment of an unreadable amount",
+      means: "A payment tool was called without naming an amount Redline could read, so no limit could be applied to it.",
+      does: "Refused.",
+      do: "This is the fail-closed path for payment tools, including ones the platform ships after this was written. If it is a tool you trust and use often, tell me and it can be priced properly rather than refused.",
+    },
+    {
+      rule: "daily_turnover",
+      says: "today's turnover plus this order exceeds the budget",
+      means: "Every order today has been inside the per-order cap, and together they have cycled the account more times than the budget allows.",
+      does: "New orders are refused until the UTC day rolls.",
+      do: "This usually means the agent is in a loop. Nothing here is necessarily losing money, but each pass pays a fee, and fees are how a small account bleeds out without any single order looking wrong. Read the log before raising the budget.",
+    },
+    {
+      rule: "internal_error",
+      says: "Redline could not make a decision, so it made the safe one",
+      means: "Something inside Redline failed: a damaged state or policy file, an unreadable directory, a bug.",
+      does: "Refused. This matters because the runtime lets a tool call through when a hook raises, so failing loudly and refusing is the only safe answer.",
+      do: "The message names the error. A damaged state file is the common case, and deleting it starts a fresh one, which also clears any halt, so read the log first.",
+    },
+    {
+      rule: "bad_notional",
+      says: "notional is not a usable number",
+      means: "The order's size came out as not-a-number, infinite, or negative.",
+      does: "Refused.",
+      do: "Nothing to fix on your side. These values compare false against every limit, so they would otherwise pass every check and be reported as within policy.",
+    },
+    {
       rule: "cooldown",
       says: "too many refusals recently; cooling down",
       means: "The agent hit the wall repeatedly in a short window, which usually means it is confused rather than unlucky.",
@@ -114,7 +149,7 @@
   <section>
     <div class="section-head">
       <h2>Every reason it can refuse</h2>
-      <span class="lbl">nine rules, in the order they are checked</span>
+      <span class="lbl">every rule, in the order they are checked</span>
     </div>
 
     {#each REFUSALS as r}

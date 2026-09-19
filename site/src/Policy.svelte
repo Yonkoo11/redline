@@ -11,21 +11,24 @@
       name: "Watching",
       note: "For limits you have never run. Judges every order and stops none, so you can read a day of verdicts before anything is enforced. Start here.",
       v: { mode: "shadow", max_trade_pct_equity: 10, max_daily_loss_pct: 5, max_drawdown_pct: 15,
-           max_leverage: 2, equity_floor_usd: 5, refusal_cooldown_count: 5, refusal_cooldown_minutes: 30 },
+           max_leverage: 2, equity_floor_usd: 5, refusal_cooldown_count: 5, refusal_cooldown_minutes: 30,
+           max_spend_usd: 1, max_daily_notional_pct_equity: 300 },
     },
     {
       key: "guard",
       name: "Standing guard",
       note: "For an agent that runs while you are asleep. Recommended once watching has shown you nothing surprising.",
       v: { mode: "enforce", max_trade_pct_equity: 10, max_daily_loss_pct: 5, max_drawdown_pct: 15,
-           max_leverage: 2, equity_floor_usd: 5, refusal_cooldown_count: 5, refusal_cooldown_minutes: 30 },
+           max_leverage: 2, equity_floor_usd: 5, refusal_cooldown_count: 5, refusal_cooldown_minutes: 30,
+           max_spend_usd: 1, max_daily_notional_pct_equity: 300 },
     },
     {
       key: "desk",
       name: "At the keyboard",
       note: "Wider limits for an agent you are actively supervising, and only while you are. Leaving this running unattended is how an account is emptied.",
       v: { mode: "enforce", max_trade_pct_equity: 25, max_daily_loss_pct: 10, max_drawdown_pct: 25,
-           max_leverage: 3, equity_floor_usd: 5, refusal_cooldown_count: 8, refusal_cooldown_minutes: 15 },
+           max_leverage: 3, equity_floor_usd: 5, refusal_cooldown_count: 8, refusal_cooldown_minutes: 15,
+           max_spend_usd: 5, max_daily_notional_pct_equity: 800 },
     },
   ];
 
@@ -59,6 +62,10 @@
       help: "An agent that keeps hitting the wall is confused. After this many refusals it is paused." },
     refusal_cooldown_minutes: { label: "Cool-down length", unit: "minutes", min: 1, max: 1440,
       help: "How long the pause lasts. It then resumes on its own, with the same limits." },
+    max_spend_usd: { label: "Payment limit", unit: "USD", min: 0, max: 1e6,
+      help: "The ceiling on a payment that is not a trade: an inference call, a pod top-up, a token launch, collateral moved somewhere Redline cannot see it. These tools take any amount and send it anywhere, so keep this small." },
+    max_daily_notional_pct_equity: { label: "Daily turnover budget", unit: "% of equity", min: 1, max: 100000,
+      help: "How much the agent may trade in one UTC day, added up. Every order can sit inside the per-order cap while a loop cycles the account many times and pays a fee on each pass. This is the runaway brake." },
   };
 
   // Field-level problems sit at the field. Cross-field problems sit at the top.
@@ -95,6 +102,8 @@
     mode: p.mode,
     max_trade_pct_equity: Number(p.max_trade_pct_equity),
     max_daily_loss_pct: Number(p.max_daily_loss_pct),
+    max_daily_notional_pct_equity: Number(p.max_daily_notional_pct_equity),
+    max_spend_usd: Number(p.max_spend_usd),
     max_drawdown_pct: Number(p.max_drawdown_pct),
     max_leverage: Number(p.max_leverage),
     equity_floor_usd: Number(p.equity_floor_usd),
