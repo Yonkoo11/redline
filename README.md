@@ -30,17 +30,39 @@ Built for The AnsemHack Clawrena (ClawPump × pump.fun, Inference Markets).
 
 ## Table of contents
 - [The tape page](#the-tape-page)
+- [Set it up](#set-it-up)
 - [The problem](#the-problem)
 - [What Redline is](#what-redline-is)
 - [Verify it yourself in 60 seconds](#verify-it-yourself-in-60-seconds)
 - [The headline result](#the-headline-result)
 - [Architecture](#architecture)
 - [The policy](#the-policy)
+- [Signing, and what it buys](#signing-and-what-it-buys)
+- [Watching before enforcing](#watching-before-enforcing)
 - [What's real, and what we deliberately did not claim](#whats-real-and-what-we-deliberately-did-not-claim)
 - [Tech stack](#tech-stack)
 - [Project layout](#project-layout)
 - [Run it locally](#run-it-locally)
 - [Tests](#tests)
+
+## Set it up
+
+```bash
+hermes plugins install Yonkoo11/redline && hermes plugins enable redline
+pip install -r requirements.txt            # cryptography, for the signature check
+
+python -m redline.sign keygen              # once ever; keep this file away from the agent
+# build your limits at https://useredline.xyz/policy/ and save them to ~/.hermes/redline/policy.json
+python -m redline.sign sign ~/.hermes/redline/policy.json
+export REDLINE_OPERATOR_PUBKEY="<the key the last command printed>"
+
+export REDLINE_MODE=shadow                 # judge everything, block nothing, read the log first
+```
+
+Four pages, all static, all reading real data: the [tape](https://useredline.xyz/),
+the [policy builder](https://useredline.xyz/policy/),
+your [own log](https://useredline.xyz/log/) (parsed in your browser, never uploaded),
+and the [guide](https://useredline.xyz/guide/) to every reason it can refuse.
 
 ## The problem
 
@@ -144,25 +166,57 @@ Stored at `~/.hermes/redline/policy.json`. Defaults:
 | `refusal_cooldown` | 5 in 30 min | after repeated refusals, refuse everything for the window |
 | equity unreadable | refuse | fail closed |
 | order unpriceable | refuse | fail closed |
+| policy unsigned, altered, or key not pinned | refuse | fail closed |
+| policy contains an unknown field | refuse | a misspelled limit is a limit that is not enforced |
+| `mode` | `enforce` | `shadow` judges and records without blocking |
+
+## Signing, and what it buys
+
+Without a signature the policy is a plain file in a directory the agent's own process can write, so
+an agent able to run shell commands could raise its own ceiling and then trade inside it. Redline
+signs the canonical bytes of the policy with Ed25519 and verifies them against a public key pinned
+in the environment. A single changed digit invalidates the signature, and an unverified policy
+refuses every governed call rather than falling back to a default.
+
+It does **not** protect an operator who keeps the signing key on the machine the agent can read.
+It raises the bar from editing a file to stealing a key. Keep the key elsewhere, and back it up.
+
+```bash
+python -m redline.sign check ~/.hermes/redline/policy.json
+```
+
+The limits published on the site carry their signature, and the operator public key is printed on
+the page, so anyone can run that check against the published policy without asking us for anything.
+
+## Watching before enforcing
+
+A policy you have never run should not be the thing standing between an agent and your money on its
+first day. `REDLINE_MODE=shadow` judges every order, writes the verdict with `would_refuse: true`,
+and blocks nothing. Read a session of that, then enforce the same limits. Watching never consumes
+the refusal cool-down, so observing cannot trip a limit that only enforcing should trip.
 
 ## What's real, and what we deliberately did not claim
 
 | Capability | Status |
 |---|---|
-| **Policy engine** | Real. 20 unit tests, `tests/test_policy.py`, run in CI. |
+| **Policy engine** | Real. 38 unit tests, `tests/test_policy.py`, run in CI. |
+| **Operator signatures** | Real. Ed25519 over the canonical policy; an altered policy refuses everything. `OperatorSignature` and `UnknownFields` in the suite. |
+| **Watching before enforcing** | Real. `ShadowMode` in the suite, and one watched order is on the public tape. |
+| **ClawPump MCP, live** | Real. Probed with a real key: 132 tools, schemas in `probe/`. `get_portfolio` and `swap_quote` return live data for the agent wallet. |
 | **Hermes runtime dispatch** | Real. `tests/hermes_integration.py` passes inside the installed Hermes v0.21.3; `hermes plugins validate` clean. |
 | **Refusal on Solana mainnet, from live equity** | Real. Transaction linked above, memo matches the record hash, reproducible with `tests/mainnet_gate.py`. |
 | **Live equity** | Measured, not asserted: SOL and USDC in the agent wallet, priced by Jupiter. Phoenix perps collateral and open positions are not counted yet, so the reader under-counts, which errs toward refusing. |
 | **UsePod x402 quoting and payment** | Real, on mainnet. `redline/inference.py` quotes the live endpoint and pays in SOL. |
 | UsePod completions | Blocked, not by us. A settle request carrying a genuine payment is refused at UsePod's edge with a Cloudflare 403, while forged proofs reach their API normally. Five variables ruled out by direct test, with `cf-ray` ids, in [probe/usepod-x402-settle-block-2026-09-19.md](probe/usepod-x402-settle-block-2026-09-19.md). |
-| An in-policy order actually filling on Phoenix | Not done. Redline allows it; nothing has been sent to a venue, because the ClawPump MCP is not wired into this Hermes yet. |
+| An in-policy order actually filling at a venue | Not done. `tests/venue_gate.py` proves the refusal against the live venue and gets a real Jupiter quote for the allowed order, then stops before spending. Run it with `--execute` to close it. |
+| Phoenix perps | Not available to this account. `perps_account` returns no registered trader, and registration is a private beta the backend controls. The venue path today is spot swaps through Jupiter. |
 | Pair-trading strategy (SOL against ETH) | Not built. |
 | Referee mode for hosted ClawPump agents | Not claimed, anywhere in this repository. Hosted agents cannot load a plugin. |
 | Realised trading performance | Not claimed. No trade has been made. |
 
 ## Tech stack
 
-- **Plugin:** Python 3.11+, standard library only · **Tests:** 20 unit + 1 runtime integration + 1 mainnet gate, in CI · **Runtime:** Hermes Agent v2026.9.14+ (`pre_tool_call` hook) · **Site:** Svelte 5 + Vite, static · **Chain:** Solana mainnet, memo program via the `solana` CLI
+- **Plugin:** Python 3.11+, standard library plus `cryptography` for the signature check · **Tests:** 38 unit + 1 runtime integration + 2 mainnet gates, in CI · **Runtime:** Hermes Agent v2026.9.14+ (`pre_tool_call` hook) · **Site:** Svelte 5 + Vite, static · **Chain:** Solana mainnet, memo program via the `solana` CLI
 
 ## Project layout
 
