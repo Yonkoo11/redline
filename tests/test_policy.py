@@ -350,3 +350,36 @@ class ShadowMode(unittest.TestCase):
         self.assertIsNone(self._over_cap())              # signed shadow: allowed
         os.environ["REDLINE_MODE"] = "enforce"
         self.assertEqual(self._over_cap()["action"], "block")
+
+
+class UnknownFields(unittest.TestCase):
+    """A misspelled limit is a limit that is not enforced, so it must refuse, not be ignored."""
+
+    def setUp(self):
+        import tempfile, pathlib, json
+        from redline.sign import keygen
+        from redline.signing import sign_policy
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+        self.key = self.tmp / "k.json"
+        self.pub = keygen(self.key)
+        self.path = self.tmp / "policy.json"
+        self.base = {"max_trade_pct_equity": 10, "max_daily_loss_pct": 5, "max_drawdown_pct": 15,
+                     "max_leverage": 2, "equity_floor_usd": 5, "allowed_markets": ["SOL"],
+                     "allowed_tokens": ["SOL"], "allowed_destinations": [],
+                     "refusal_cooldown_count": 5, "refusal_cooldown_minutes": 30}
+
+    def _write(self, extra):
+        import json
+        from redline.signing import sign_policy
+        self.path.write_text(json.dumps({**self.base, **extra}))
+        sign_policy(self.path, self.key)
+
+    def test_a_misspelled_limit_refuses(self):
+        self._write({"max_trade_pct": 50})
+        p = Policy.load(self.path, self.pub)
+        self.assertFalse(p.verified)
+        self.assertIn("max_trade_pct", p.unverified_reason)
+
+    def test_schema_and_date_metadata_are_allowed(self):
+        self._write({"schema": 1, "generated": "2026-09-19"})
+        self.assertTrue(Policy.load(self.path, self.pub).verified)

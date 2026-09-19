@@ -1,4 +1,5 @@
 <script>
+  import Shell from "./lib/Shell.svelte";
   const RPC = "https://solana-rpc.publicnode.com";
   const AGENT = "FT5GaRv2eV74aS3dTPw6ZNsVBackGTW9dNQfw4jSZirz";
   const SOL = "So11111111111111111111111111111111111111112";
@@ -49,18 +50,7 @@
   }
 </script>
 
-<div class="wrap">
-  <header class="masthead">
-    <svg class="brandmark" viewBox="0 0 512 512" aria-hidden="true">
-      <circle cx="256" cy="256" r="248" fill="#131417" />
-      <path d="M 116 256 A 140 140 0 0 1 366 170" fill="none" stroke="#3A3C42" stroke-width="26" />
-      <path d="M 366 170 A 140 140 0 0 1 396 256" fill="none" stroke="#E03A2F" stroke-width="26" />
-      <circle cx="256" cy="256" r="26" fill="#F4F3EF" />
-      <path d="M240 240 L272 240 L336 150 L312 140 Z" fill="#F4F3EF" />
-    </svg>
-    <span class="brandword">redline</span>
-    <span class="spacer"></span>
-  </header>
+<Shell here="home">
 
   <div class="state">
     <span class="dot" aria-hidden="true"></span>
@@ -212,24 +202,19 @@
       <code>hermes plugins install Yonkoo11/redline &amp;&amp; hermes plugins enable redline</code>
       <button type="button" onclick={copy} aria-label="Copy the install command">{copied ? "Copied" : "Copy"}</button>
     </div>
+    <p class="then">
+      Then <a href="./policy/">build your limits</a> and sign them with a key the agent does not
+      hold. Run it watching first, with nothing blocked, and read what it would have stopped. The
+      <a href="./guide/">guide</a> lists every reason it can refuse and what to do about each one.
+    </p>
   </section>
 
-  <footer>
-    <a href="https://github.com/Yonkoo11/redline">Source</a>
-    <a href="https://x.com/useredline">@useredline</a>
-    <span>The AnsemHack Clawrena</span>
-  </footer>
-</div>
+</Shell>
 
 <style>
-  .wrap{max-width:1180px;margin:0 auto;padding:0 var(--s6)}
   h1,h2,h3,.brandword{font-family:"Barlow Condensed",Impact,sans-serif;margin:0}
   .lbl{font:600 12px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
 
-  .masthead{display:flex;align-items:baseline;gap:var(--s3);padding:var(--s6) 0 var(--s3);border-bottom:2px solid var(--ink)}
-  .brandmark{width:30px;height:30px;align-self:center;flex:none}
-  .brandword{font-weight:800;font-size:30px;line-height:1;letter-spacing:.01em}
-  .spacer{flex:1}
 
   .state{padding:var(--s4) 0;border-bottom:1px solid var(--rule);min-width:0}
   .state b{font-weight:600}
@@ -319,6 +304,11 @@
   .install{margin:var(--s16) 0 var(--s24);padding:var(--s8);background:var(--ink);color:var(--paper);border-radius:var(--r-lg);box-shadow:var(--e-3)}
   .install h3{font-weight:800;font-size:clamp(22px,2.6vw,30px);line-height:1.05;letter-spacing:-.01em;margin-bottom:var(--s2)}
   .install p{margin:0 0 var(--s6);color:rgba(244,243,239,.62);font-size:14px;max-width:54ch}
+  .install .then{margin:var(--s6) 0 0;line-height:1.75;max-width:62ch}
+  .install .then a{color:var(--paper);border-bottom:1px solid rgba(244,243,239,.35);text-decoration:none;
+                   transition:border-color var(--t-fast) var(--ease)}
+  @media(hover:hover){.install .then a:hover{border-color:var(--red)}}
+  .install .then a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(224,58,47,.45);border-radius:var(--r-sm)}
   .cmd{display:flex;align-items:center;gap:var(--s4);background:rgba(244,243,239,.07);border-radius:var(--r-md);padding:var(--s4);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
   .cmd code{font:500 14px/1.4 "IBM Plex Mono",monospace;overflow-x:auto;white-space:nowrap;flex:1;min-width:0}
   .cmd button{font:600 12px/1 "IBM Plex Mono",monospace;letter-spacing:.1em;text-transform:uppercase;
@@ -328,8 +318,5 @@
   .cmd button:active{transform:scale(.97)}
   .cmd button:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(224,58,47,.45)}
 
-  footer{padding:var(--s8) 0;border-top:2px solid var(--ink);display:flex;gap:var(--s4);flex-wrap:wrap;font-size:13px;color:var(--ink-3)}
   footer a{text-decoration:none;border-bottom:1px solid var(--rule);transition:color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease)}
-  @media(hover:hover){footer a:hover{color:var(--ink);border-color:var(--red)}}
-  footer a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(224,58,47,.35);border-radius:var(--r-sm)}
 </style>

@@ -1,7 +1,7 @@
 """Redline policy engine. Pure functions plus a small state store. Fails closed."""
 from __future__ import annotations
 import json, time
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, fields, asdict
 from pathlib import Path
 from typing import Optional
 
@@ -58,9 +58,15 @@ class Policy:
         every governed call with a reason the operator can read."""
         data = json.loads(Path(path).read_text())
         ok, why = verify_policy(data, operator_pubkey)
-        data.pop("signature", None)
-        data.pop("verified", None)
-        data.pop("unverified_reason", None)
+        for meta in ("signature", "schema", "generated", "verified", "unverified_reason"):
+            data.pop(meta, None)
+        # A misspelled limit would otherwise be silently ignored, and a limit that is silently
+        # ignored is a limit that is not enforced. Unknown keys refuse.
+        unknown = sorted(set(data) - {f.name for f in fields(cls)})
+        if unknown:
+            ok, why = False, f"policy has unknown field(s): {', '.join(unknown)}"
+            for k in unknown:
+                data.pop(k)
         return cls(**data, verified=ok, unverified_reason=why)
 
 
