@@ -22,7 +22,7 @@ _BASE_KEYS = ("size", "amount", "base_amount", "quantity")
 _SWAP_IN_KEYS = ("input_mint", "input_token", "from_token")
 # A payment names its amount and sometimes its currency. Anything it does not name cannot be
 # priced, and an unpriceable payment is refused.
-_SPEND_USD_KEYS = ("amount_usd", "usd", "price_usd", "max_amount_usd")
+_SPEND_USD_KEYS = ("usd", "price_usd", "max_amount_usd")   # amount_usd lives in _SIZE_KEYS
 _SPEND_TOKEN_KEYS = ("token", "mint", "currency", "asset", "pay_with")
 
 # Smallest-unit decimals for every symbol swap_execute names in its own schema.
@@ -43,27 +43,60 @@ def _symbol(args: dict) -> Optional[str]:
     return str(v).upper().split("-")[0].split("/")[0] if v else None
 
 
-def _notional(args: dict, symbol: Optional[str], price: PriceFn,
-              raw_units: bool = False) -> Optional[float]:
+def _declared_usd(args: dict) -> Optional[float]:
+    """A size the CALLER says the order is worth, in dollars."""
     usd = _first(args, _SIZE_KEYS)
-    if usd is not None:
+    if usd is None:
+        return None
+    try:
         return float(usd)
+    except (TypeError, ValueError):
+        return None
+
+
+def _from_base(args: dict, symbol: Optional[str], price: PriceFn,
+               raw_units: bool) -> tuple[bool, Optional[float]]:
+    """The size the VENUE will execute, priced. Returns (a base amount was present, its value)."""
     base = _first(args, _BASE_KEYS)
     if base is None:
-        return None
+        return False, None
     px = price(symbol) if symbol else None
     if not px:
-        return None
+        return True, None
     try:
         qty = float(base)
     except (TypeError, ValueError):
-        return None
+        return True, None
     if raw_units:
         dec = _DECIMALS.get(symbol or "")
         if dec is None:
-            return None          # unknown decimals -> unpriceable -> refused
+            return True, None    # unknown decimals -> unpriceable -> refused
         qty = qty / (10 ** dec)
-    return qty * px
+    return True, qty * px
+
+
+def _notional(args: dict, symbol: Optional[str], price: PriceFn,
+              raw_units: bool = False) -> Optional[float]:
+    """How much this order is worth, judged against the field the venue actually executes.
+
+    The agent writes every key in this dict. It used to be enough to add `notional_usd: 0.5`
+    beside a real `amount` of one SOL: this function returned the declared 0.50, the policy
+    allowed it, and the venue, whose schema permits unknown keys and ignores them, swapped the
+    whole SOL. Verified against the live swap_execute schema on 2026-09-19, which carries no
+    `additionalProperties: false`.
+
+    So a declared dollar size is never trusted over an executable one. Where a base amount is
+    present it decides, and a declared size can only ever make the order look BIGGER, never
+    smaller. Where the base amount cannot be priced the order is unpriceable, and unpriceable is
+    refused; falling back to the caller's own number there would hand the bypass straight back.
+    """
+    declared = _declared_usd(args)
+    had_base, from_base = _from_base(args, symbol, price, raw_units)
+    if had_base:
+        if from_base is None:
+            return None
+        return max(from_base, declared) if declared is not None else from_base
+    return declared
 
 
 def intent_from_call(tool_name: str, args: dict, price: PriceFn) -> Optional[Intent]:
@@ -83,19 +116,24 @@ def intent_from_call(tool_name: str, args: dict, price: PriceFn) -> Optional[Int
     if kind == "withdraw":
         return Intent(kind, None)
     if kind == "spend":
-        usd = _first(args, _SPEND_USD_KEYS)
-        if usd is not None:
-            try:
-                return Intent(kind, float(usd))
-            except (TypeError, ValueError):
-                return Intent(kind, None)
+        # Same rule as a trade: the caller's own dollar figure never shrinks a payment that also
+        # names an amount. A payment amount is quoted in whole units by every payment tool checked
+        # on 2026-09-19, unlike a swap, which quotes the smallest unit.
         sym = str(_first(args, _SPEND_TOKEN_KEYS) or "").upper() or None
-        amt = _first(args, _BASE_KEYS)
-        if sym and amt is not None:
-            # A payment amount is quoted in whole units by every payment tool checked on
-            # 2026-09-19, unlike a swap, which quotes the smallest unit.
-            return Intent(kind, _notional(args, sym, price, raw_units=False), token=sym)
-        return Intent(kind, None)
+        had_base, from_base = _from_base(args, sym, price, raw_units=False)
+        declared = _declared_usd(args)
+        if declared is None:
+            declared = _first(args, _SPEND_USD_KEYS)
+            try:
+                declared = float(declared) if declared is not None else None
+            except (TypeError, ValueError):
+                return Intent(kind, None, token=sym)
+        if had_base:
+            if from_base is None:
+                return Intent(kind, None, token=sym)
+            worst = max(from_base, declared) if declared is not None else from_base
+            return Intent(kind, worst, token=sym)
+        return Intent(kind, declared, token=sym)
 
     swap_in = _first(args, _SWAP_IN_KEYS)
     sym = _symbol(args) or (str(swap_in).upper() if swap_in else None)

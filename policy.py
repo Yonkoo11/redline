@@ -33,7 +33,28 @@ GOVERNED = {
     # launches cost SOL
     "launch_token_gasless": "spend",
     "launch_metaplex_genesis_token": "spend",
+    # Added 2026-09-19 after auditing all 132 tools against the venue's own readOnly/destructive
+    # flags rather than against this file's imagination. Each line quotes what the platform says
+    # the tool does. Every one of these was ungoverned, which means invisible.
+    "predictions_open": "swap",            # "Places a bet on a specific outcome" — wallet money, at risk
+    "agent_card_create": "spend",          # "create/buy a card" — buys a spendable instrument
+    "agent_card_reveal": "withdraw",       # reveals the card number: the funds leave where we can see them
+    "agent_mail_create": "spend",          # "One-time payment of..."
+    "agent_mail_send": "spend",            # "over x402 — any per-send fee is paid in USDC"
+    "usepod_provision": "spend",           # "if `amount` is given — fund" the new pod
+    "perps_account_prepare": "spend",      # "optionally deposit wallet USDC into Phoenix collateral"
+    "create_agent_run": "spend",           # "an autonomous objective ... with budget" — delegated spending
+    "trigger_automation": "spend",         # "trigger an automation now, bypassing its trigger condition"
 }
+
+# Read-only by the platform's own flag, and money-shaped enough to be caught by MONEY_WORDS below.
+# Blocking these does not protect the wallet, it just stops the agent looking before it leaps:
+# swap_quote and perps_order_preview and x402_pay_check are the tools that price a thing BEFORE
+# committing to it, and the venue's own description of swap_execute says "Always get a quote
+# first". All eight were being refused. Checked against the live tool list on 2026-09-19.
+READ_ONLY = ("swap_quote", "perps_order_preview", "x402_pay_check", "get_launch_status",
+             "limit_order_history", "agent_card_withdrawals", "pay_sh_search",
+             "pay_sh_provider_details", "agent_card_quote", "arbitrage_quote")
 
 # The platform ships 132 tools today and can ship more tomorrow, so an allowlist alone is always a
 # release behind. Anything whose name reads like it moves value and is not mapped above is treated
@@ -43,8 +64,11 @@ MONEY_WORDS = ("swap", "transfer", "send", "withdraw", "deposit", "order", "buy"
                "trade", "stake", "launch", "bridge", "pay", "fund", "collateral", "liquidat")
 
 # Named exceptions: these appear money-shaped and return funds or move nothing.
+# Cancels and closes: they return funds to the wallet or move nothing. agent_mail_send used to sit
+# here, which was simply wrong — the platform says its per-send fee is paid in USDC from the
+# wallet, so it is a spend and it moved to GOVERNED above.
 NOT_MONEY = ("dca_cancel", "limit_order_cancel", "perps_order_cancel", "withdraw_marketplace_bid",
-             "agent_mail_send", "predictions_close", "perps_trader_register")
+             "predictions_close", "perps_trader_register")
 
 
 def bare_tool_name(tool_name: str) -> str:
@@ -52,16 +76,31 @@ def bare_tool_name(tool_name: str) -> str:
     return tool_name.split("_", 2)[-1] if tool_name.startswith("mcp_") else tool_name
 
 
+def _name_candidates(tool_name: str) -> list:
+    """Every reading of the name, because the prefix is not ours to predict.
+
+    Hermes composes an MCP tool name as mcp_<server>_<tool>, and the stripper above assumes
+    exactly that. A server whose own name has no underscore, say `swap`, produces
+    `mcp_swap_execute`, which the stripper reduces to `execute` -- not a governed suffix, not a
+    money word, and therefore invisible. A swap would have gone straight through.
+
+    So every suffix is considered, not just the one the three-segment assumption produces. A
+    false positive here costs one line in the operator's policy and is visible in the log. A
+    false negative costs the wallet.
+    """
+    parts = tool_name.split("_")
+    return [tool_name] + ["_".join(parts[i:]) for i in range(1, len(parts))]
+
+
 def governed_kind(tool_name: str) -> Optional[str]:
     """Map a tool name to a governed kind, or None for tools that cannot move value."""
-    bare = bare_tool_name(tool_name)
+    names = _name_candidates(tool_name)
     for suffix, kind in GOVERNED.items():
-        if bare.endswith(suffix):
+        if any(n.endswith(suffix) for n in names):
             return kind
-    if any(bare.endswith(x) for x in NOT_MONEY):
+    if any(n.endswith(x) for n in names for x in NOT_MONEY + READ_ONLY):
         return None
-    low = bare.lower()
-    if any(w in low for w in MONEY_WORDS):
+    if any(w in n.lower() for n in names for w in MONEY_WORDS):
         return "spend"          # unknown, money-shaped: priced as None, therefore refused
     return None
 
