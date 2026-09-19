@@ -6,6 +6,7 @@
 
   let rows = $state([]);
   let fileName = $state("");
+  let loading = $state(true);
   let error = $state("");
   let dragging = $state(false);
   let filters = $state([]);          // [{field, value, exclude}]
@@ -17,6 +18,19 @@
     if (r.would_refuse) return "watched";
     return r.allowed ? "allowed" : "refused";
   }
+
+  // The home page links here to read the whole tape, so this page opens with the published one
+  // already loaded. Dropping a file replaces it with your own agent's.
+  fetch("../tape.json")
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+    .then((d) => {
+      if (rows.length === 0 && Array.isArray(d.rows) && d.rows.length) {
+        rows = [...d.rows].reverse();
+        fileName = "the published tape";
+      }
+    })
+    .catch(() => {})
+    .finally(() => (loading = false));
 
   async function read(file) {
     error = "";
@@ -83,17 +97,20 @@
 
 <Shell here="log">
   <section class="head">
-    <h1>Read your own log.</h1>
+    <h1>Every verdict, in full.</h1>
     <p class="lede">
-      Every install writes its own record of what it judged. Open yours here. The file is parsed in
-      this tab and never leaves your machine: there is no server behind this page and nothing is
-      uploaded. <code>redline log</code> does the same job in a terminal, because a tool
-      whose evidence can only be read through a website is a tool that asks you to trust the
-      website.
+      This is the tape from the agent that ran the mainnet gate, every record of it, with the rule
+      that decided each one. Your own install writes the same file, and reading it here replaces
+      this one: it is parsed in this tab and never leaves your machine, because there is no server
+      behind this page and nothing is uploaded. <code>redline log</code> does the same job in a
+      terminal, because a tool whose evidence can only be read through a website is a tool that
+      asks you to trust the website.
     </p>
   </section>
 
-  {#if rows.length === 0}
+  {#if rows.length === 0 && loading}
+    <p class="hint">Reading the published tape…</p>
+  {:else if rows.length === 0}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="drop" class:over={dragging}
          ondragover={(e) => { e.preventDefault(); dragging = true; }}
@@ -125,7 +142,13 @@
         {/if}
       </div>
       <span class="lbl">{fileName} · {rows.length} records · {span}</span>
+      <label class="swap">
+        Read your own file
+        <input type="file" accept=".jsonl,.json,.txt,application/json"
+               onchange={(e) => e.target.files[0] && read(e.target.files[0])} />
+      </label>
     </div>
+    {#if error}<p class="err">{error}</p>{/if}
 
     {#if filters.length}
       <div class="chipsRow">
@@ -207,6 +230,14 @@
          font:400 14px/1 "IBM Plex Mono",monospace;padding:var(--s2) 0}
   .tally b{font-size:20px;font-weight:600;color:var(--ink);margin-right:6px;font-variant-numeric:tabular-nums}
   .tally:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(224,58,47,.35);border-radius:var(--r-sm)}
+
+  .swap{cursor:pointer;color:var(--ink-2);text-decoration:none;
+        border-bottom:1px solid var(--rule);
+        font:500 13px/1.5 "IBM Plex Mono",monospace;
+        transition:color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease)}
+  @media(hover:hover){.swap:hover{color:var(--ink);border-color:var(--red)}}
+  .swap input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+  .swap:focus-within{outline:none;box-shadow:0 0 0 3px rgba(224,58,47,.35);border-radius:var(--r-sm)}
 
   .chipsRow{display:flex;gap:var(--s2);flex-wrap:wrap;margin-top:var(--s4)}
   .fchip,.fclear{border:none;cursor:pointer;border-radius:var(--r-full);padding:var(--s2) var(--s3);

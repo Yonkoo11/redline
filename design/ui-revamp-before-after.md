@@ -41,6 +41,12 @@ and ends with a line out to the full 24. The evidence still leads; the page stop
 written" in its right column. It is a rule about the tape, not a fact about a row, so it is said
 once now, in the section head: "newest first. only refusals get a receipt."
 
+**The log opened empty.** `/log/` is the full reader, and it opened as a drop zone asking for a
+file — so the new link from the home page promised 24 verdicts and delivered a file picker. It now
+loads the published tape on arrival, with "read your own file" in the bar to replace it, and the
+headline and lede were rewritten to say what the page actually does. The parsing still happens in
+the tab and nothing is uploaded.
+
 ## The one failure the acceptance run caught
 
 `/policy/` overflowed horizontally by 10px at 390. Cause: at the single-column breakpoint the
