@@ -106,8 +106,16 @@ class HostileNumbers(unittest.TestCase):
         self.assertFalse(v.allowed, "a negative notional must not pass")
 
     def test_a_non_numeric_amount_is_unpriceable(self):
-        v = judge({"input_mint": "SOL", "output_mint": "USDC", "amount": "; rm -rf /"})
+        # Deliberately not a shell-shaped string. Redline never passes an argument to a shell, so
+        # an injection literal would test nothing, and shipping one inside a security plugin trips
+        # the scanner that every user runs at install.
+        v = judge({"input_mint": "SOL", "output_mint": "USDC", "amount": "not-a-number"})
         self.assertFalse(v.allowed)
+
+    def test_an_amount_that_overflows_to_infinity_is_refused(self):
+        v = judge({"amount_usd": "1e400"}, tool="mcp_clawpump_x402_pay")
+        self.assertFalse(v.allowed)
+        self.assertEqual(v.rule, "bad_notional")
 
     def test_leverage_as_a_string_does_not_bypass_the_ceiling(self):
         v = judge({"symbol": "SOL", "side": "bid", "quantity": 0.01, "leverage": "99"},

@@ -1,15 +1,8 @@
-"""UsePod x402 client: buy one inference answer, pay for it on Solana, keep the receipt.
-
-STATUS 2026-09-19: quote and payment are proven against the live API on mainnet. Settlement is
-currently refused at UsePod's edge with a Cloudflare 403, but only when the referenced payment is
-genuine; forged proofs reach the API and get ordinary 400s. Evidence and the ruled-out variables
-are in probe/usepod-x402-settle-block-2026-09-19.md. Callers must handle SettleBlocked.
-
-Envelope measured 2026-09-19, saved at probe/usepod-x402-quote-2026-09-19.json:
-  POST /proxy/x402/v1/chat/completions with no payment -> 402 + `payment-required` header
-  (base64 JSON). `accepts` offers three rails; we take the Solana one. The quote binds
-  `body_hash`, so the retry must send byte-identical JSON, and it expires in 60 seconds.
-No account and no API key: the wallet is the identity.
+"""UsePod x402 client. Kept as evidence for the Inference Markets track, not as part of
+the plugin: nothing imports it, and settle is refused at UsePod's edge whenever the
+payment is genuine (probe/usepod-x402-settle-block-2026-09-19.md). It lived inside the
+plugin until 2026-09-19, where it contributed three findings to the install scanner for
+code that never ran.
 """
 from __future__ import annotations
 import base64, json, os, subprocess

@@ -216,7 +216,7 @@ the refusal cool-down, so observing cannot trip a limit that only enforcing shou
 | **Hermes runtime dispatch** | Real. `tests/hermes_integration.py` passes inside the installed Hermes v0.21.3; `hermes plugins validate` clean. |
 | **Refusal on Solana mainnet, from live equity** | Real. Transaction linked above, memo matches the record hash, reproducible with `tests/mainnet_gate.py`. |
 | **Live equity** | Measured, not asserted: SOL and USDC in the agent wallet, priced by Jupiter. Phoenix perps collateral and open positions are not counted yet, so the reader under-counts, which errs toward refusing. |
-| **UsePod x402 quoting and payment** | Real, on mainnet. `redline/inference.py` quotes the live endpoint and pays in SOL. |
+| **UsePod x402 quoting and payment** | Real, on mainnet. `probe/usepod_inference.py` quotes the live endpoint and pays in SOL. It sits in `probe/` rather than in the plugin, because nothing imports it and dead code inside a plugin still has to pass the install scanner. |
 | UsePod completions | Blocked, not by us. A settle request carrying a genuine payment is refused at UsePod's edge with a Cloudflare 403, while forged proofs reach their API normally. Five variables ruled out by direct test, with `cf-ray` ids, in [probe/usepod-x402-settle-block-2026-09-19.md](probe/usepod-x402-settle-block-2026-09-19.md). |
 | **An in-policy order filling at a venue** | Real, on mainnet. Equity $16.03 read live, cap $1.60. The $14.43 order was refused ([receipt](https://solscan.io/tx/5Sv6ff6fa5fk3upbm6hBJdCssvoDxhRJWwQ2J3wxGM2MVW3cUc6nFahhJrqhj3ZoMdgoh3ASfiRY68Y8F9rFvWvj)); the $0.80 order was allowed and [filled on Jupiter](https://solscan.io/tx/UYUDiw6eUNsuieWvB6VKW9N3MEUJX1agU4g1wmcw3Cog8S3E7v5tZ3i4in2pAdKdke2fXrsxmHvf8Y2zvAjX6Rw), landing 0.800618 USDC. Reproduce with `bash run-venue-gate.sh --execute`. |
 | Phoenix perps | Not available to this account. `perps_account` returns no registered trader, and registration is a private beta the backend controls. The venue path today is spot swaps through Jupiter. |
@@ -238,7 +238,6 @@ redline/
   equity.py       # wallet SOL + USDC priced by Jupiter, read from Solana RPC
   tape.py         # hashed records to tape.jsonl; refusals posted as Solana memos
   runtime.py      # wires the live readers in when Hermes loads the plugin
-  inference.py    # UsePod x402: quote, pay on Solana, settle (see the honesty table)
   plugin.yaml     # Hermes manifest
 tests/            # 38 unit tests + hermes_integration.py (real runtime) + mainnet_gate.py and venue_gate.py (real chain, real venue)
 site/             # the tape page (Svelte + Vite)
