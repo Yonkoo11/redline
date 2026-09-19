@@ -44,7 +44,7 @@
       says: "daily loss X% >= Y%",
       means: "The day is down more than the daily limit allows. The day starts at 00:00 UTC.",
       does: "New trades are refused. Existing positions are untouched, because Redline never acts on its own.",
-      do: "Wait for the UTC day to roll, or decide the limit is wrong and change it deliberately.",
+      do: "First check whether the fall was money you spent rather than money the agent lost. The limit compares equity now against equity at the start of the day, and it cannot see why equity moved, so a fee you paid, a transfer out or a withdrawal looks identical to a trading loss. Run the day command below. If it was an outflow, say so and the day rebaselines. Otherwise wait for the UTC day to roll.",
     },
     {
       rule: "cooldown",
@@ -137,6 +137,12 @@
       <dt>What has it decided so far?</dt>
       <dd><code class="cmd">tail -f ~/.hermes/redline/tape.jsonl</code>
         <span>Or open the file on the <a href="../log/">log page</a>, which reads it in your browser.</span></dd>
+      <dt>Why is the day down, and was it a loss or a spend?</dt>
+      <dd><code class="cmd">python -m redline.day</code>
+        <span>If the fall was money you moved, <code>python -m redline.day reset</code> moves the
+        day's starting point down to where you are now. It is written to your log like any other
+        decision, it can only forgive a fall that already happened, and it never touches the
+        drawdown high-water mark.</span></dd>
       <dt>Is the plugin actually loaded?</dt>
       <dd><code class="cmd">hermes plugins validate</code></dd>
     </dl>
@@ -149,6 +155,7 @@
       <li><b>It never holds a key to your wallet.</b> It reads a balance and judges a call.</li>
       <li><b>It cannot stop an operator who keeps the signing key where the agent can read it.</b> Signing raises the bar from editing a file to stealing a key. Keep the key elsewhere.</li>
       <li><b>It does not watch positions between calls.</b> It acts at the moment a tool is called, not continuously.</li>
+      <li><b>It cannot tell a spend from a loss.</b> The daily limit reads equity, so a fee you paid or a transfer you made counts against the day. That is why the rebaseline command exists, and why it writes a record when you use it.</li>
     </ul>
   </section>
 </Shell>

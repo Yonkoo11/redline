@@ -383,3 +383,42 @@ class UnknownFields(unittest.TestCase):
     def test_schema_and_date_metadata_are_allowed(self):
         self._write({"schema": 1, "generated": "2026-09-19"})
         self.assertTrue(Policy.load(self.path, self.pub).verified)
+
+
+class DayReset(unittest.TestCase):
+    """A deliberate outflow looks exactly like a trading loss. The operator can say which it was,
+    and the rebaseline can only ever forgive a fall that already happened."""
+
+    def setUp(self):
+        import tempfile, pathlib
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+        self.state_path = self.tmp / "state.json"
+
+    def test_reset_moves_the_day_start_down_to_current_equity(self):
+        from redline.day import reset
+        st = State(day_start_usd=100.0, high_water_usd=120.0, day_key="2026-09-19")
+        reset(st, 94.0, self.state_path, self.tmp)
+        self.assertEqual(st.day_start_usd, 94.0)
+
+    def test_reset_never_raises_the_baseline(self):
+        """Otherwise it would create headroom for a future loss instead of forgiving a past outflow."""
+        from redline.day import reset
+        st = State(day_start_usd=100.0, high_water_usd=120.0, day_key="2026-09-19")
+        reset(st, 110.0, self.state_path, self.tmp)
+        self.assertEqual(st.day_start_usd, 100.0)
+
+    def test_reset_leaves_the_drawdown_high_water_alone(self):
+        """The drawdown halt exists for the worst day and must survive a rebaseline."""
+        from redline.day import reset
+        st = State(day_start_usd=100.0, high_water_usd=120.0, day_key="2026-09-19")
+        reset(st, 94.0, self.state_path, self.tmp)
+        self.assertEqual(st.high_water_usd, 120.0)
+
+    def test_reset_is_written_to_the_tape(self):
+        import json
+        from redline.day import reset
+        st = State(day_start_usd=100.0, high_water_usd=120.0, day_key="2026-09-19")
+        reset(st, 94.0, self.state_path, self.tmp)
+        rec = json.loads((self.tmp / "tape.jsonl").read_text().strip())
+        self.assertEqual(rec["rule"], "day_reset")
+        self.assertIn("outflow", rec["reason"])

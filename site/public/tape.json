@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-19T07:26:12.143Z",
+ "generated_at": "2026-09-19T07:54:40.811Z",
  "source": "live agent tape",
  "policy": {
   "max_trade_pct_equity": 10,
@@ -182,6 +182,28 @@
    "ts": 1789802218,
    "would_refuse": true,
    "written_at": 1789802220
+  },
+  {
+   "allowed": false,
+   "equity_source": "live",
+   "equity_usd": 16.03,
+   "hash": "8a9200bd38fb6e9d55dda6ca88119bfd1ca58e522e934b20f358fab55d6ce8bd",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 14.424106672705664,
+    "token": "SOL"
+   },
+   "memo_sig": "586TyDTubfqk6RLLmTyMn9f68DSNyaeiDdbX3h1h9V2BEsmgFnrFZr1fud4vRHMQtknV1UWvorww7RcFKiFufoQe",
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "daily loss 5.8% >= 5.0%",
+   "rule": "daily_loss",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789804372,
+   "written_at": 1789804380
   }
  ]
 }

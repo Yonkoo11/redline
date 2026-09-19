@@ -62,7 +62,13 @@ msg, _ = P._dispatch_pre_tool_call_hooks(
     "mcp_clawpump_swap_execute",
     {"input_mint": "SOL", "output_mint": "USDC", "amount": str(over_lamports)}, **kw)
 print(f"\n2. over-cap swap ({over_lamports/LAMPORTS:.4f} SOL, ~${eq*0.90:.2f}) -> {msg}")
-assert msg and "trade_cap" in msg, "expected a trade_cap refusal"
+assert msg, "an order at 90% of equity must be refused"
+if "trade_cap" not in msg:
+    # Something stopped it before the size check. That is still a refusal, but it is not the one
+    # this gate exists to prove, and the in-policy order below will be refused too.
+    print("\n   NOTE: a different rule fired first, so the per-order cap was never reached.")
+    print("   Inspect the window with:  python -m redline.day")
+    sys.exit(1)
 
 rec = json.loads(open(os.path.expanduser("~/.hermes/redline/tape.jsonl")).readlines()[-1])
 print(f"   record hash : {rec['hash']}")
