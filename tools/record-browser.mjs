@@ -13,10 +13,14 @@ const SITE = "https://useredline.xyz/";
 const OUT = "demo";
 const [refusalSig, fillSig] = process.argv.slice(2);
 
+// SHOTS=shot-4b-fill node tools/record-browser.mjs ... re-records one shot instead of all of them.
+const only = process.env.SHOTS ? process.env.SHOTS.split(",") : null;
+
 mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ channel: "chrome" });
 
 async function shot(name, body) {
+  if (only && !only.includes(name)) return;
   const ctx = await browser.newContext({
     viewport: { width: 1920, height: 1080 },
     deviceScaleFactor: 1,
@@ -32,18 +36,21 @@ async function shot(name, body) {
 
 const settle = (page) => page.waitForTimeout(1500);
 
+// Every shot below is recorded with slack on the end. The voice take sets the real length and
+// the edit trims to it, rather than the voice being squeezed to fit a clip.
+//
 // Shot 1: the problem. A real scroll to the measured ClawPump fact, at reading speed.
 await shot("shot-1-problem", async (page) => {
   await page.goto(SITE, { waitUntil: "networkidle" });
   await settle(page);
   for (let i = 0; i < 9; i++) { await page.mouse.wheel(0, 100); await page.waitForTimeout(220); }
-  await page.waitForTimeout(3500);
+  await page.waitForTimeout(14000);
 });
 
 // Shot 2: the dial. Reload so the needle sweeps to the live reading on camera.
 await shot("shot-2-dial", async (page) => {
   await page.goto(SITE, { waitUntil: "networkidle" });
-  await page.waitForTimeout(6000);
+  await page.waitForTimeout(18000);
 });
 
 // Shot 4: the proof. The refusal's memo on chain, then the fill that followed it.
@@ -52,25 +59,33 @@ await shot("shot-2-dial", async (page) => {
 // "Verify you are human" to an automated browser, and defeating that is not on the table. The
 // official explorer serves the same transaction, renders the memo as readable text, and is the
 // explorer a judge is least likely to argue with.
-async function explorer(name, sig, findText) {
+async function explorer(name, sig, findText, tab) {
   await shot(name, async (page) => {
     await page.goto(`https://explorer.solana.com/tx/${sig}`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(7000);
+    if (tab) {
+      // The tabs are in-page anchors (href="#tokens"), not a router. The balance that actually
+      // moved lives down there, not in the summary at the top.
+      await page.locator(`a[href="#${tab}"]`).first().click({ timeout: 4000 }).catch(() => {});
+      await page.waitForTimeout(3000);
+    }
     if (findText) {
+      // Short timeout on purpose. The default is 30 seconds, and a target that never becomes
+      // actionable quietly turned a 13 second shot into a 44 second one.
       const target = page.getByText(findText, { exact: false }).first();
-      await target.scrollIntoViewIfNeeded().catch(() => {});
+      await target.scrollIntoViewIfNeeded({ timeout: 3000 }).catch(() => {});
       await page.waitForTimeout(1200);
     }
     await page.waitForTimeout(5000);
   });
 }
 if (refusalSig) await explorer("shot-4a-refusal", refusalSig, "redline:refused");
-if (fillSig) await explorer("shot-4b-fill", fillSig, "USDC");
+if (fillSig) await explorer("shot-4b-fill", fillSig, null, "tokens");
 
 // Shot 6: the page, held still. No end-card.
 await shot("shot-6-hold", async (page) => {
   await page.goto(SITE, { waitUntil: "networkidle" });
-  await page.waitForTimeout(9000);
+  await page.waitForTimeout(15000);
 });
 
 await browser.close();
