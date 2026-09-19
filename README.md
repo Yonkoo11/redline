@@ -6,13 +6,13 @@
 [![tests](https://github.com/Yonkoo11/redline/actions/workflows/tests.yml/badge.svg)](https://github.com/Yonkoo11/redline/actions/workflows/tests.yml)
 ![runtime](https://img.shields.io/badge/Hermes_runtime_dispatch-4%2F4_cases_pass-121212)
 ![tape](https://img.shields.io/badge/on--chain_refusal-mainnet_confirmed-121212)
-[![live](https://img.shields.io/badge/live-yonkoo11.github.io%2Fredline-3fb950)](https://yonkoo11.github.io/redline/)
+[![live](https://img.shields.io/badge/live-useredline.xyz-3fb950)](https://useredline.xyz/)
 
 ### Kill switch for claw traders.
 
 **Redline is a Hermes plugin that holds a ClawPump trading agent under a policy its operator wrote. Every order the agent tries passes the policy or is refused, and a refusal is written to Solana as a memo carrying the record's hash. Today: 20 tests green, the real Hermes runtime dispatching through it, and a refusal decided from live on-chain equity and recorded on Solana mainnet.**
 
-**[ Live ↗ ](https://yonkoo11.github.io/redline/)** · **[ Verify it yourself ↗ ](#verify-it-yourself-in-60-seconds)** · **[ The receipt ↗ ](https://solscan.io/tx/2pFTPkGoK4y3yPkdMZ5EQd3FYnGjTNv2qwdsoBmkrzGKq2fbvQDq6eGVRQvU2Rx58WF2qfLku5sV7R5YMVZHQe29)** · **[ @useredline ↗ ](https://x.com/useredline)**
+**[ Live ↗ ](https://useredline.xyz/)** · **[ Verify it yourself ↗ ](#verify-it-yourself-in-60-seconds)** · **[ The receipt ↗ ](https://solscan.io/tx/2pFTPkGoK4y3yPkdMZ5EQd3FYnGjTNv2qwdsoBmkrzGKq2fbvQDq6eGVRQvU2Rx58WF2qfLku5sV7R5YMVZHQe29)** · **[ @useredline ↗ ](https://x.com/useredline)**
 
 Built for The AnsemHack Clawrena (ClawPump × pump.fun, Inference Markets).
 
@@ -22,11 +22,19 @@ Built for The AnsemHack Clawrena (ClawPump × pump.fun, Inference Markets).
 
 ## The tape page
 
-*What the still shows: the shell that is live today at [yonkoo11.github.io/redline](https://yonkoo11.github.io/redline/). Policy on the left, an empty tape on the right, and a status line that says no mainnet transaction exists yet.*
+*What the stills show: [useredline.xyz](https://useredline.xyz/) as served right now. The equity and
+the cap are read from Solana in the visitor's own browser, so the number on the dial is the number
+in force at the moment you load it. The tape below carries every order judged, with a Solscan link
+on each refusal.*
 
 | desktop, 1280 wide | phone, 390 wide |
 |---|---|
-| ![Redline tape page, desktop: policy panel and empty tape](docs/images/landing.png) | ![Redline tape page, phone](docs/images/landing-phone.png) |
+| ![Redline tape page on desktop: live equity, the cap derived from it, and the tape of judged orders](docs/images/landing.png) | ![The same page at phone width](docs/images/landing-phone.png) |
+
+*The policy builder at [useredline.xyz/policy](https://useredline.xyz/policy/): form on the left,
+the file it produces on the right, and the commands to sign it underneath.*
+
+![The Redline policy builder, with the generated policy file beside the form](docs/images/policy-builder.png)
 
 ## Table of contents
 - [The tape page](#the-tape-page)
@@ -230,7 +238,7 @@ redline/
   runtime.py      # wires the live readers in when Hermes loads the plugin
   inference.py    # UsePod x402: quote, pay on Solana, settle (see the honesty table)
   plugin.yaml     # Hermes manifest
-tests/            # 20 unit tests + hermes_integration.py (real runtime) + mainnet_gate.py (real chain)
+tests/            # 38 unit tests + hermes_integration.py (real runtime) + mainnet_gate.py and venue_gate.py (real chain, real venue)
 site/             # the tape page (Svelte + Vite)
 probe/            # measured facts, dated: Phoenix markets, ClawPump token field, UsePod quote + the settle block
 design/logo/      # the mark, wordmark, and the rounds that were rejected
