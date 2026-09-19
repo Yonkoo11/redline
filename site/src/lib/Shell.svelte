@@ -36,6 +36,10 @@
   {@render children()}
 
   <footer>
+    <!-- The site never stated its own address anywhere a reader could see: it existed only in
+         the meta tags. That is fine until someone screenshots the page, or films it, and then
+         there is nothing on screen telling them where they are. -->
+    <span class="home">useredline.xyz</span>
     <a href="https://github.com/Yonkoo11/redline">Source</a>
     <a href="https://x.com/useredline">@useredline</a>
     <a href="https://pump.fun/coin/DCma6fRtqQJdPXsxr8wmZzNvqbGzKxuBaAQYoeQyjohs">$REDLINE</a>
@@ -63,6 +67,7 @@
 
   footer{padding:var(--s8) 0;margin-top:var(--s16);border-top:2px solid var(--ink);
          display:flex;gap:var(--s4);flex-wrap:wrap;font-size:13px;color:var(--ink-3)}
+  footer .home{font-weight:600;color:var(--ink)}
   footer a{text-decoration:none;border-bottom:1px solid var(--rule);
            transition:color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease)}
   @media(hover:hover){footer a:hover{color:var(--ink);border-color:var(--red)}}
