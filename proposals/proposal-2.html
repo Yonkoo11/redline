@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Redline — Ledger</title>
+<!--
+DNA: DNA-S-H-M-D-X  (Single-column · Hidden nav · Minimal hero · Duotone · Mixed serif+mono)
+INSPIRATION: Newspaper/Editorial (column, rules, drop-cap discipline) × a bound trading ledger
+             × Solscan's label/value rows
+RESEARCH USED:
+  stolen — Cloudflare: state declared in one line before any history
+  stolen — Solscan: labelled fact rows, value right, hairline between
+  differentiation — the page IS the record book; the policy is printed as terms at the head of the
+                    ledger, and every judged order is a ruled entry beneath it
+  anti-patterns avoided — no dark crypto ground, no cards at all, no chart, no stat boxes
+UX ARCHITECTURE
+  Entry: link from X, the token page, or the repo.
+  Exit: a receipt clicked, or the install line copied from the colophon.
+  Screens: one, read top to bottom like a page of a book.
+  Happy path: state line → terms → entries → colophon with the install line.
+  States: loading = the equity figure shows a ruled blank; error = the figure is struck through with
+          a footnote naming the source that failed; empty ledger = "no order has been judged" set as
+          a ruled entry, which is honest at n=0.
+  Kill-switch test: a ledger needs no explanation; there is no interaction to get stuck in.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#F2EFE6; --cream-2:#E9E5D9; --ink:#1A1713; --ink-2:#4D473F; --ink-3:#8A8377;
+  --red:#C1271C; --rule:rgba(26,23,19,.22); --rule-soft:rgba(26,23,19,.10);
+  --r-sm:2px; --r-md:4px; --r-full:999px;
+  --e-1:2px 2px 0 rgba(26,23,19,.10);
+  --e-2:4px 4px 0 rgba(26,23,19,.12);
+  --e-3:7px 7px 0 var(--red);
+  --ease:cubic-bezier(.22,1,.36,1); --t-fast:140ms;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s6:24px;--s8:32px;--s12:48px;--s16:64px;--s24:96px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased}
+body{
+  font:400 17px/1.6 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='.055'/></svg>");
+  -webkit-tap-highlight-color:transparent;
+}
+.sheet{max-width:760px;margin:0 auto;padding:0 var(--s6) var(--s24);}
+a{color:inherit}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.lbl{font:600 11px/1 "IBM Plex Mono",monospace;letter-spacing:.17em;text-transform:uppercase;color:var(--ink-3)}
+
+/* masthead: a printed head rule, no navigation */
+.head{padding:var(--s16) 0 var(--s3);border-bottom:3px double var(--ink)}
+.head .title{display:flex;align-items:center;gap:var(--s3)}
+.head svg{width:34px;height:34px}
+.head h1{margin:0;font:400 46px/1 "Iowan Old Style",Georgia,serif;letter-spacing:-.03em}
+.head .strap{display:flex;gap:var(--s4);margin-top:var(--s3);flex-wrap:wrap}
+
+/* the one-line state, before anything else */
+.state{padding:var(--s4) 0;border-bottom:1px solid var(--rule);font-size:16px}
+.state .mark{display:inline-block;width:9px;height:9px;background:var(--red);border-radius:var(--r-full);margin-right:9px;vertical-align:baseline}
+.state b{font-weight:400;font-style:italic}
+
+/* minimal hero: one sentence, one italic word, one footnote */
+.lede{padding:var(--s12) 0 var(--s8)}
+.lede p{margin:0;font-size:clamp(23px,3.6vw,31px);line-height:1.28;letter-spacing:-.017em;max-width:24ch}
+.lede em{font-style:italic;color:var(--red)}
+.fn{margin-top:var(--s6);padding-top:var(--s4);border-top:1px solid var(--rule-soft);font-size:15px;color:var(--ink-2);max-width:56ch}
+.fn sup{color:var(--red);font-weight:600}
+
+/* live figures set as ledger facts, not as cards */
+.figs{display:grid;grid-template-columns:1fr 1fr;gap:var(--s8);margin-top:var(--s8);padding:var(--s6) 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.fig .lbl{display:block;margin-bottom:6px}
+.fig .val{font:500 34px/1 "IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.fig .val.red{color:var(--red)}
+.fig .note{font-size:13px;color:var(--ink-3);margin-top:6px;font-family:"IBM Plex Mono",monospace}
+
+/* terms: the policy, printed as the ledger's terms */
+h2{margin:var(--s16) 0 var(--s4);font:400 30px/1 "Iowan Old Style",Georgia,serif;letter-spacing:-.025em}
+h2 + .lbl{display:block;margin-bottom:var(--s6)}
+.terms{column-count:1;font-size:15px}
+@media(min-width:640px){.terms{column-count:2;column-gap:var(--s12);column-rule:1px solid var(--rule-soft)}}
+.term{display:flex;justify-content:space-between;gap:var(--s4);padding:9px 0;border-bottom:1px solid var(--rule-soft);break-inside:avoid}
+.term .v{font:500 15px/1 "IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.term .v.red{color:var(--red)}
+
+/* entries: ruled lines, the refused one struck with a red rule */
+.entry{padding:var(--s6) 0;border-bottom:1px solid var(--rule)}
+.entry.refused{position:relative;padding-left:var(--s6)}
+.entry.refused::before{content:"";position:absolute;left:0;top:var(--s6);bottom:var(--s6);width:4px;background:var(--red)}
+.entry .top{display:flex;align-items:baseline;gap:var(--s3);flex-wrap:wrap}
+.entry .verdict{font:600 12px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;text-transform:uppercase}
+.entry .verdict.refused{color:var(--red)}
+.entry .verdict.allowed{color:var(--ink-3)}
+.entry .when{margin-left:auto;font:400 13px/1 "IBM Plex Mono",monospace;color:var(--ink-3)}
+.entry .body{margin-top:var(--s3);font-size:17px;line-height:1.5}
+.entry .body b{font-weight:400;font-style:italic}
+.entry .facts{margin-top:var(--s4);display:grid;grid-template-columns:1fr;gap:2px}
+.factrow{display:flex;justify-content:space-between;gap:var(--s4);padding:6px 0;border-bottom:1px dotted var(--rule-soft);font-family:"IBM Plex Mono",monospace;font-size:13px}
+.factrow .k{color:var(--ink-3)}
+.factrow .v{font-variant-numeric:tabular-nums;text-align:right}
+.receipt{text-decoration:none;border-bottom:1.5px solid var(--red);padding-bottom:1px;transition:background var(--t-fast) var(--ease)}
+@media(hover:hover){.receipt:hover{background:rgba(193,39,28,.10)}}
+.receipt:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(193,39,28,.32);border-radius:var(--r-sm)}
+
+/* colophon: install line, set like a printer's mark */
+.colophon{margin-top:var(--s16);padding:var(--s8);background:var(--cream-2);box-shadow:var(--e-3);border:1px solid var(--rule)}
+.colophon h3{margin:0 0 var(--s2);font:400 26px/1.1 "Iowan Old Style",Georgia,serif;letter-spacing:-.02em}
+.colophon p{margin:0 0 var(--s6);font-size:15px;color:var(--ink-2);max-width:48ch}
+.cmd{display:flex;gap:var(--s3);align-items:center;background:var(--ink);padding:var(--s3) var(--s3) var(--s3) var(--s4);border-radius:var(--r-md)}
+.cmd code{flex:1;font:500 13px/1.5 "IBM Plex Mono",monospace;color:var(--cream);overflow-x:auto;white-space:nowrap}
+.copy{font:600 11px/1 "IBM Plex Mono",monospace;letter-spacing:.12em;text-transform:uppercase;background:var(--red);color:#fff;border:0;border-radius:var(--r-sm);padding:12px 14px;min-height:44px;cursor:pointer;transition:transform 80ms var(--ease),box-shadow var(--t-fast) var(--ease)}
+@media(hover:hover){.copy:hover{transform:translateY(-1px);box-shadow:3px 3px 0 rgba(26,23,19,.35)}}
+.copy:active{transform:scale(.97)}
+.copy:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(193,39,28,.45)}
+footer{margin-top:var(--s12);padding-top:var(--s4);border-top:3px double var(--ink);display:flex;gap:var(--s4);flex-wrap:wrap;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-3)}
+footer a{text-decoration:none;border-bottom:1px solid var(--rule)}
+.dnabadge{position:fixed;top:10px;right:10px;font:600 10px/1 "IBM Plex Mono",monospace;letter-spacing:.1em;background:var(--ink);color:var(--cream);padding:6px 8px;border-radius:var(--r-sm);z-index:9}
+@media(prefers-reduced-motion:reduce){*{transition-duration:1ms!important}}
+</style>
+</head>
+<body>
+<div class="dnabadge">DNA-S-H-M-D-X</div>
+<div class="sheet">
+
+  <header class="head">
+    <div class="title">
+      <svg viewBox="0 0 512 512" aria-hidden="true">
+        <circle cx="256" cy="256" r="248" fill="#1A1713"/>
+        <path d="M 116 256 A 140 140 0 0 1 366 170" fill="none" stroke="#5A544A" stroke-width="26"/>
+        <path d="M 366 170 A 140 140 0 0 1 396 256" fill="none" stroke="#C1271C" stroke-width="26"/>
+        <circle cx="256" cy="256" r="26" fill="#F2EFE6"/>
+        <path d="M240 240 L272 240 L336 150 L312 140 Z" fill="#F2EFE6"/>
+      </svg>
+      <h1>Redline</h1>
+    </div>
+    <div class="strap">
+      <span class="lbl">The record of refusals</span>
+      <span class="lbl" style="margin-left:auto">Solana mainnet</span>
+    </div>
+  </header>
+
+  <div class="state"><span class="mark"></span>Two orders judged. One refused, and <b>the refusal is on chain</b>.</div>
+
+  <section class="lede">
+    <p>An agent may trade as hard as it likes, right up to the <em>line</em>. It cannot cross it.</p>
+    <p class="fn">
+      Of the two hundred newest tokens on ClawPump, one hundred and eleven describe a trading agent.<sup>1</sup>
+      The platform gives each one a daily model-spend budget and an address whitelist, and no per-order
+      cap, no daily loss limit and no drawdown halt. The limits live in the prompt, where the model can
+      argue with them.
+    </p>
+  </section>
+
+  <div class="figs">
+    <div class="fig">
+      <span class="lbl">Equity, read now</span>
+      <div class="val" id="eq">— — —</div>
+      <div class="note" id="eqn">FT5GaRv2…jSZirz</div>
+    </div>
+    <div class="fig">
+      <span class="lbl">The line, per order</span>
+      <div class="val red" id="cap">— — —</div>
+      <div class="note">one tenth of equity</div>
+    </div>
+  </div>
+
+  <h2>Terms</h2>
+  <span class="lbl">signed by the operator · enforced on every call the model makes</span>
+  <div class="terms">
+    <div class="term"><span>Per-order cap</span><span class="v red">10% of equity</span></div>
+    <div class="term"><span>Daily loss limit</span><span class="v">5%</span></div>
+    <div class="term"><span>Drawdown halt</span><span class="v red">15%</span></div>
+    <div class="term"><span>Maximum leverage</span><span class="v">2×</span></div>
+    <div class="term"><span>Markets</span><span class="v">SOL · ETH</span></div>
+    <div class="term"><span>Swap tokens</span><span class="v">SOL · USDC</span></div>
+    <div class="term"><span>Transfers</span><span class="v">allowlist</span></div>
+    <div class="term"><span>Collateral withdrawal</span><span class="v red">refused</span></div>
+    <div class="term"><span>Equity unreadable</span><span class="v red">refused</span></div>
+  </div>
+
+  <h2>Entries</h2>
+  <span class="lbl">newest first · every order the agent attempted</span>
+
+  <article class="entry refused">
+    <div class="top"><span class="verdict refused">Refused</span><span class="when">19 Sep 2026 · 00:00 UTC</span></div>
+    <p class="body">The agent asked for a <b>perpetual position in SOL worth $15.32</b>. Equity at that moment was $17.02, which puts the line at $1.70. The order was nine times the line, so it never reached the venue.</p>
+    <div class="facts">
+      <div class="factrow"><span class="k">notional</span><span class="v">$15.32</span></div>
+      <div class="factrow"><span class="k">the line</span><span class="v">$1.70</span></div>
+      <div class="factrow"><span class="k">equity, live at judgement</span><span class="v">$17.02</span></div>
+      <div class="factrow"><span class="k">receipt</span><span class="v"><a class="receipt" href="https://solscan.io/tx/2pFTPkGoK4y3yPkdMZ5EQd3FYnGjTNv2qwdsoBmkrzGKq2fbvQDq6eGVRQvU2Rx58WF2qfLku5sV7R5YMVZHQe29">2pFTPkGo…HQe29</a></span></div>
+    </div>
+  </article>
+
+  <article class="entry">
+    <div class="top"><span class="verdict allowed">Allowed</span><span class="when">19 Sep 2026 · 00:00 UTC</span></div>
+    <p class="body">A <b>perpetual position in SOL worth $0.85</b>, inside every term. Redline returned nothing and the call went through untouched.</p>
+    <div class="facts">
+      <div class="factrow"><span class="k">notional</span><span class="v">$0.85</span></div>
+      <div class="factrow"><span class="k">the line</span><span class="v">$1.70</span></div>
+      <div class="factrow"><span class="k">receipt</span><span class="v">none — only refusals are written</span></div>
+    </div>
+  </article>
+
+  <section class="colophon">
+    <h3>Put it in front of your agent</h3>
+    <p>A Hermes plugin. It never holds a key, it refuses when it cannot read the balance, and it is MIT licensed.</p>
+    <div class="cmd">
+      <code>hermes plugins install Yonkoo11/redline &amp;&amp; hermes plugins enable redline</code>
+      <button class="copy" type="button" aria-label="Copy the install command">Copy</button>
+    </div>
+  </section>
+
+  <footer>
+    <a href="https://github.com/Yonkoo11/redline">Source</a>
+    <a href="https://x.com/useredline">@useredline</a>
+    <span>1. clawpump.tech, measured 18 Sep 2026</span>
+    <span style="margin-left:auto">Editorial × ledger × Solscan rows</span>
+  </footer>
+</div>
+<script>
+const RPC="https://api.mainnet-beta.solana.com",AGENT="FT5GaRv2eV74aS3dTPw6ZNsVBackGTW9dNQfw4jSZirz",SOL="So11111111111111111111111111111111111111112";
+const money=n=>"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+(async()=>{const eq=document.getElementById("eq"),cap=document.getElementById("cap");
+ try{const r=await fetch(RPC,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:1,method:"getBalance",params:[AGENT]})});
+  const bal=(await r.json()).result.value/1e9;
+  const px=await fetch("https://lite-api.jup.ag/price/v3?ids="+SOL).then(x=>x.json());
+  const usd=bal*px[SOL].usdPrice; eq.textContent=money(usd); cap.textContent=money(usd*0.1);
+ }catch(e){eq.style.textDecoration="line-through";eq.textContent="unavailable";
+  document.getElementById("eqn").textContent="the chain or the price feed did not answer";}})();
+document.querySelector(".copy").addEventListener("click",async e=>{await navigator.clipboard.writeText(document.querySelector(".cmd code").textContent.trim());const b=e.currentTarget,t=b.textContent;b.textContent="Copied";setTimeout(()=>b.textContent=t,1600);});
+</script>
+</body></html>

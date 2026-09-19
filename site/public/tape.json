@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-09-19T00:03:55.984Z",
- "source": "committed snapshot",
+ "generated_at": "2026-09-19T05:33:23.461Z",
+ "source": "live agent tape",
  "policy": {
   "max_trade_pct_equity": 10,
   "max_daily_loss_pct": 5,
