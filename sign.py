@@ -1,8 +1,8 @@
 """Sign a policy, or make the key that signs it.
 
-    python -m redline.sign keygen  [path]                 make an operator key
-    python -m redline.sign sign    <policy.json> [key]    sign a policy in place
-    python -m redline.sign check   <policy.json>          verify against the pinned key
+    redline sign keygen  [path]                 make an operator key
+    redline sign sign    <policy.json> [key]    sign a policy in place
+    redline sign check   <policy.json>          verify against the pinned key
 
 The key file is the same shape solana-keygen writes, so an existing Solana keypair works.
 The private half never leaves this file and is never printed.
@@ -55,12 +55,12 @@ def main(argv: list[str]) -> int:
 
     if cmd == "sign":
         if len(argv) < 3:
-            print("usage: python -m redline.sign sign <policy.json> [keypair.json]")
+            print("usage: redline sign sign <policy.json> [keypair.json]")
             return 2
         policy_path = Path(argv[2])
         key_path = Path(argv[3]) if len(argv) > 3 else DEFAULT_KEY
         if not key_path.exists():
-            print(f"no key at {key_path}. Run:  python -m redline.sign keygen")
+            print(f"no key at {key_path}. Run:  redline sign keygen")
             return 1
         pub = sign_policy(policy_path, key_path)
         print(f"signed {policy_path}")
@@ -69,7 +69,7 @@ def main(argv: list[str]) -> int:
 
     if cmd == "check":
         if len(argv) < 3:
-            print("usage: python -m redline.sign check <policy.json>")
+            print("usage: redline sign check <policy.json>")
             return 2
         policy = json.loads(Path(argv[2]).read_text())
         pinned = os.environ.get("REDLINE_OPERATOR_PUBKEY")

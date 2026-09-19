@@ -87,7 +87,7 @@
     <p class="lede">
       Every install writes its own record of what it judged. Open yours here. The file is parsed in
       this tab and never leaves your machine: there is no server behind this page and nothing is
-      uploaded. <code>python -m redline.log</code> does the same job in a terminal, because a tool
+      uploaded. <code>redline log</code> does the same job in a terminal, because a tool
       whose evidence can only be read through a website is a tool that asks you to trust the
       website.
     </p>
@@ -107,7 +107,7 @@
                onchange={(e) => e.target.files[0] && read(e.target.files[0])} />
       </label>
       {#if error}<p class="err">{error}</p>{/if}
-      <p class="alt">Or in a terminal: <code>python -m redline.log</code></p>
+      <p class="alt">Or in a terminal: <code>redline log</code></p>
     </div>
   {:else}
     <div class="bar">

@@ -194,7 +194,7 @@
           signature stops matching, and Redline refuses every order until an operator signs again.
           Check it yourself:
         </p>
-        <code class="sig-cmd">python -m redline.sign check policy.json</code>
+        <code class="sig-cmd">redline sign check policy.json</code>
       </div>
     {/if}
   {/if}
@@ -207,7 +207,9 @@
       <button type="button" onclick={copy} aria-label="Copy the install command">{copied ? "Copied" : "Copy"}</button>
     </div>
     <p class="then">
-      Then <a href="./policy/">build your limits</a> and sign them with a key the agent does not
+      Put its commands on your path with
+      <code class="inlinecmd">export PATH="$HOME/.hermes/plugins/redline:$PATH"</code>, then
+      <a href="./policy/">build your limits</a> and sign them with a key the agent does not
       hold. Run it watching first, with nothing blocked, and read what it would have stopped. The
       <a href="./guide/">guide</a> lists every reason it can refuse and what to do about each one.
     </p>
@@ -309,6 +311,9 @@
   .install h3{font-weight:800;font-size:clamp(22px,2.6vw,30px);line-height:1.05;letter-spacing:-.01em;margin-bottom:var(--s2)}
   .install p{margin:0 0 var(--s6);color:rgba(244,243,239,.62);font-size:14px;max-width:54ch}
   .install .then{margin:var(--s6) 0 0;line-height:1.75;max-width:62ch}
+  .inlinecmd{display:inline-block;padding:1px 6px;border-radius:var(--r-sm);
+             background:rgba(244,243,239,.10);font:500 13px/1.5 "IBM Plex Mono",monospace;
+             color:var(--paper);word-break:break-all}
   .install .then a{color:var(--paper);border-bottom:1px solid rgba(244,243,239,.35);text-decoration:none;
                    transition:border-color var(--t-fast) var(--ease)}
   @media(hover:hover){.install .then a:hover{border-color:var(--red)}}

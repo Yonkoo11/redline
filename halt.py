@@ -7,8 +7,8 @@ to watch. That is the intended behaviour and it should stay uncomfortable.
 But until now the documented way out was "edit the state file by hand", which is not a recovery
 path, it is an invitation to delete the wrong thing at the worst moment. So:
 
-  python -m redline.halt               why it halted, and what it would take to clear
-  python -m redline.halt clear         clear it, and write that decision to the log
+  redline halt               why it halted, and what it would take to clear
+  redline halt clear         clear it, and write that decision to the log
 
 Clearing is a deliberate operator act. It writes a record exactly like a refusal does, and it
 resets the high-water mark to current equity, because leaving the old mark in place would re-halt
@@ -57,9 +57,9 @@ def main(argv: list[str]) -> int:
 
     if len(argv) < 2 or argv[1] != "clear":
         print("\nEvery order is being refused. Read the log before clearing this:")
-        print("  python -m redline.log --refused")
+        print("  redline log --refused")
         print("\nWhen you have decided it is safe:")
-        print("  python -m redline.halt clear")
+        print("  redline halt clear")
         return 0
 
     if equity is None:

@@ -59,9 +59,9 @@ the file it produces on the right, and the commands to sign it underneath.*
 hermes plugins install Yonkoo11/redline && hermes plugins enable redline
 pip install -r requirements.txt            # cryptography, for the signature check
 
-python -m redline.sign keygen              # once ever; keep this file away from the agent
+redline sign keygen              # once ever; keep this file away from the agent
 # build your limits at https://useredline.xyz/policy/ and save them to ~/.hermes/redline/policy.json
-python -m redline.sign sign ~/.hermes/redline/policy.json
+redline sign sign ~/.hermes/redline/policy.json
 export REDLINE_OPERATOR_PUBKEY="<the key the last command printed>"
 
 export REDLINE_MODE=shadow                 # judge everything, block nothing, read the log first
@@ -190,7 +190,7 @@ It does **not** protect an operator who keeps the signing key on the machine the
 It raises the bar from editing a file to stealing a key. Keep the key elsewhere, and back it up.
 
 ```bash
-python -m redline.sign check ~/.hermes/redline/policy.json
+redline sign check ~/.hermes/redline/policy.json
 ```
 
 The limits published on the site carry their signature, and the operator public key is printed on

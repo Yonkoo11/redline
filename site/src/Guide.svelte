@@ -86,15 +86,18 @@
       <li>
         <b>Install it.</b>
         <code class="cmd">hermes plugins install Yonkoo11/redline && hermes plugins enable redline</code>
+        The commands below live inside the plugin. Put them on your path once and they work from
+        anywhere:
+        <code class="cmd">export PATH="$HOME/.hermes/plugins/redline:$PATH"</code>
       </li>
       <li>
         <b>Make your key, once ever.</b> Keep the file somewhere the agent cannot read, and back it up.
-        <code class="cmd">python -m redline.sign keygen</code>
+        <code class="cmd">redline sign keygen</code>
       </li>
       <li>
         <b>Build your limits</b> on the <a href="../policy/">policy page</a>, save the file to
         <code>~/.hermes/redline/policy.json</code>, then sign it.
-        <code class="cmd">python -m redline.sign sign ~/.hermes/redline/policy.json</code>
+        <code class="cmd">redline sign sign ~/.hermes/redline/policy.json</code>
       </li>
       <li>
         <b>Pin the public half</b> in your shell, using the key the last step printed.
@@ -133,21 +136,21 @@
     <h2>Checks you can run</h2>
     <dl class="checks">
       <dt>Are my limits the ones I signed?</dt>
-      <dd><code class="cmd">python -m redline.sign check ~/.hermes/redline/policy.json</code></dd>
+      <dd><code class="cmd">redline sign check ~/.hermes/redline/policy.json</code></dd>
       <dt>What has it decided so far?</dt>
-      <dd><code class="cmd">python -m redline.log --refused</code>
+      <dd><code class="cmd">redline log --refused</code>
         <span>Filters, tallies and raw records, all in the terminal. Or open the file on the
         <a href="../log/">log page</a>, which reads it in your browser. The file on your machine is
         the truth either way, and the site is only a nicer lens on it.</span></dd>
       <dt>Why is the day down, and was it a loss or a spend?</dt>
-      <dd><code class="cmd">python -m redline.day</code>
-        <span>If the fall was money you moved, <code>python -m redline.day reset</code> moves the
+      <dd><code class="cmd">redline day</code>
+        <span>If the fall was money you moved, <code>redline day reset</code> moves the
         day's starting point down to where you are now. It is written to your log like any other
         decision, it can only forgive a fall that already happened, and it never touches the
         drawdown high-water mark.</span></dd>
       <dt>It halted on drawdown. Now what?</dt>
-      <dd><code class="cmd">python -m redline.halt</code>
-        <span>Shows why, and what clearing would do. <code>python -m redline.halt clear</code>
+      <dd><code class="cmd">redline halt</code>
+        <span>Shows why, and what clearing would do. <code>redline halt clear</code>
         clears it and writes that decision to your log.</span></dd>
       <dt>Is the plugin actually loaded?</dt>
       <dd><code class="cmd">hermes plugins validate</code></dd>

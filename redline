@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Operator commands, runnable from anywhere.
+#
+# The plugin directory IS the Python package, because that is what `hermes plugins install` lays
+# down. So `python -m redline.<cmd>` only works from the directory above it. This script finds
+# that directory itself.
+#
+#   redline sign keygen                 make the operator key, once ever
+#   redline sign sign <policy.json>     sign a policy in place
+#   redline sign check <policy.json>    verify it against the pinned key
+#   redline log [--refused|--watched]   read the decisions
+#   redline day [reset]                 the daily loss window
+#   redline halt [clear]                the drawdown halt
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PARENT="$(dirname "$HERE")"
+PKG="$(basename "$HERE")"
+
+if [ $# -eq 0 ]; then
+  sed -n '3,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  exit 2
+fi
+
+CMD="$1"; shift
+case "$CMD" in
+  sign|log|day|halt) ;;
+  *) echo "unknown command: $CMD" >&2
+     echo "try: sign, log, day, halt" >&2
+     exit 2 ;;
+esac
+
+PY="${REDLINE_PYTHON:-}"
+if [ -z "$PY" ]; then
+  for c in "$HOME/.hermes/hermes-agent/venv/bin/python" python3 python; do
+    if command -v "$c" >/dev/null 2>&1 || [ -x "$c" ]; then PY="$c"; break; fi
+  done
+fi
+
+export PYTHONPATH="$PARENT${PYTHONPATH:+:$PYTHONPATH}"
+exec "$PY" -m "$PKG.$CMD" "$@"

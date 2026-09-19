@@ -17,8 +17,8 @@ It is deliberately awkward to do by accident:
   - it does not touch the drawdown high-water mark, which is the limit that exists for the worst
     day and is meant to survive this
 
-  python -m redline.day               show the window
-  python -m redline.day reset         set the day's starting point to equity now
+  redline day               show the window
+  redline day reset         set the day's starting point to equity now
 """
 from __future__ import annotations
 
@@ -99,7 +99,7 @@ def main(argv: list[str]) -> int:
     show(state, equity)
     if equity is not None and state.day_start_usd and equity < state.day_start_usd:
         print("\nIf that fall was money you spent or moved rather than lost trading:")
-        print("  python -m redline.day reset")
+        print("  redline day reset")
     return 0
 
 

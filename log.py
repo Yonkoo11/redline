@@ -4,13 +4,13 @@ The site has a page that reads this same file in a browser, and it is nicer. Thi
 the file on your machine is the truth, and a tool whose evidence can only be read through a website
 is a tool that asks you to trust the website. Everything the page does, this does.
 
-  python -m redline.log                     the last 20 decisions
-  python -m redline.log -n 100              more of them
-  python -m redline.log --refused           only what was stopped
-  python -m redline.log --watched           only what would have been stopped
-  python -m redline.log --rule trade_cap    one rule
-  python -m redline.log --today             since 00:00 UTC
-  python -m redline.log --raw               the records themselves, one per line
+  redline log                     the last 20 decisions
+  redline log -n 100              more of them
+  redline log --refused           only what was stopped
+  redline log --watched           only what would have been stopped
+  redline log --rule trade_cap    one rule
+  redline log --today             since 00:00 UTC
+  redline log --raw               the records themselves, one per line
 """
 from __future__ import annotations
 

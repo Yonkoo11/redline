@@ -225,13 +225,14 @@
           Save it to <code>{DEST}</code>, or paste it there.
         </li>
         <li>
-          Make the key that signs it, once ever:
-          <code class="cmd">python -m redline.sign keygen</code>
+          Make the key that signs it, once ever. The command ships inside the plugin, at
+          <code>~/.hermes/plugins/redline/redline</code>:
+          <code class="cmd">redline sign keygen</code>
           Keep that file somewhere your agent cannot read, and back it up.
         </li>
         <li>
           Sign these limits:
-          <code class="cmd">python -m redline.sign sign {DEST}</code>
+          <code class="cmd">redline sign sign {DEST}</code>
         </li>
         <li>
           Pin the public half in your shell, using the key the last step printed:

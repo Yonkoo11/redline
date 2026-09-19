@@ -6,7 +6,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { path: redline }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: python -m pip install --disable-pip-version-check -r requirements.txt
-      - run: python -m unittest discover -s tests -t . -v
+      - run: python -m pip install --disable-pip-version-check -r requirements.txt pytest
+        working-directory: redline
+      # Checked out into a directory named `redline` because the repository root IS the plugin
+      # package: `hermes plugins install` clones it to plugins/redline/ and imports it by that
+      # name. Tests import `redline.policy`, so the parent has to be on the path.
+      - run: python -m pytest tests -q
+        working-directory: redline
