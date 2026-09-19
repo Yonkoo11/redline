@@ -7,13 +7,15 @@ grab has twice leaked an unrelated project.
   python3 tools/record-terminal.py out.cast -- bash run-venue-gate.sh --execute
 
 Render it:
-  agg --font-size 28 --theme monokai out.cast out.gif
+  agg --font-size 28 --idle-time-limit 60 out.cast out.gif   # the default caps waits at 5s
   ffmpeg -i out.gif -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:-1:-1:color=0x1e1e1e" \
          -c:v libx264 -pix_fmt yuv420p -r 30 out.mp4
 """
 import json, os, pty, sys, time
 
-COLS, ROWS = 120, 32
+# 140 wide because a Solana signature is 88 characters and at 120 the solscan URL
+# wrapped onto a second line in the middle of the take.
+COLS, ROWS = 140, 32
 
 if "--" not in sys.argv:
     sys.exit(__doc__)
