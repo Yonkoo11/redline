@@ -15,16 +15,27 @@ const snapshotPolicy = "../data/policy.json";
 
 const parse = (p) => readFileSync(p, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
 
+// Only decisions taken against a real balance are published. A test that hands the plugin a made
+// up balance writes to the same tape, and those rows are not evidence of anything: a refusal
+// decided from a number nobody held proves nothing, and on a public page it reads as though it
+// did. Until now this was done by hand, which is why twelve fixture rows were sitting in the live
+// tape waiting for the next publish to pick them up.
+const isReal = (r) => r.equity_source === "live";
+
 let rows, policy, source;
 if (existsSync(liveTape)) {
-  rows = parse(liveTape);
+  const all = parse(liveTape);
+  rows = all.filter(isReal);
+  if (all.length !== rows.length) {
+    console.log(`tape: ${all.length - rows.length} fixture-equity rows held back, not published`);
+  }
   policy = existsSync(join(agentHome, "policy.json")) ? JSON.parse(readFileSync(join(agentHome, "policy.json"), "utf8")) : {};
   source = "live agent tape";
   mkdirSync("../data", { recursive: true });
   writeFileSync(snapshot, rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
   writeFileSync(snapshotPolicy, JSON.stringify(policy, null, 1));
 } else if (existsSync(snapshot)) {
-  rows = parse(snapshot);
+  rows = parse(snapshot).filter(isReal);
   policy = existsSync(snapshotPolicy) ? JSON.parse(readFileSync(snapshotPolicy, "utf8")) : {};
   source = "committed snapshot";
 } else {
