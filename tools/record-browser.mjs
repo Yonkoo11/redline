@@ -39,19 +39,23 @@ const settle = (page) => page.waitForTimeout(1500);
 // Every shot below is recorded with slack on the end. The voice take sets the real length and
 // the edit trims to it, rather than the voice being squeezed to fit a clip.
 //
-// The opener. It holds on the dial for the whole opening narration, because that narration is
-// ABOUT the dial: the balance, the cap under it, the money being real. An earlier version eased
-// down into the tape halfway through and left the narration describing something no longer on
-// screen. The drift is small on purpose, a few hundred pixels over half a minute, enough that
-// the frame is not dead and not enough to lose the subject.
-await shot("shot-2-dial", async (page) => {
+// Shot 1: the landing page, as it was. A real scroll to the measured ClawPump fact.
+await shot("shot-1-problem", async (page) => {
   await page.goto(SITE, { waitUntil: "networkidle" });
-  await page.waitForTimeout(4000);           // the page settles and the needle sweeps
-  for (let i = 0; i < 30; i++) {
-    await page.mouse.wheel(0, 11);
-    await page.waitForTimeout(880);
-  }
-  await page.waitForTimeout(4000);
+  await settle(page);
+  for (let i = 0; i < 9; i++) { await page.mouse.wheel(0, 100); await page.waitForTimeout(220); }
+  await page.waitForTimeout(15000);
+});
+
+// Shot 2: the policy page, NOT the landing page again. This shot used to be a second pass over
+// the same landing screen with the same needle sweeping, and back to back the two read as one
+// repeated frame. Its line is "the cap under it is ten percent of it, from a policy I signed",
+// so the page that shows the policy and its signature is the right picture for it.
+await shot("shot-2-policy", async (page) => {
+  await page.goto(SITE + "policy/", { waitUntil: "networkidle" });
+  await page.waitForTimeout(2600);
+  for (let i = 0; i < 14; i++) { await page.mouse.wheel(0, 58); await page.waitForTimeout(700); }
+  await page.waitForTimeout(8000);
 });
 
 // Shot 4: the proof. The refusal's memo on chain, then the fill that followed it.
