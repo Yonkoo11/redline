@@ -69,3 +69,6 @@ site/dist/
 .claude/
 probe/README.md
 site/public/tape.json
+
+# outreach drafts stay private
+OUTREACH.md
