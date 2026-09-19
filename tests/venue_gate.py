@@ -98,8 +98,35 @@ if not EXECUTE:
 
 fill = mcp("swap_execute", {"input_mint": "SOL", "output_mint": "USDC",
                             "amount": str(in_lamports), "slippage_bps": 50})
-sig = fill.get("signature") or fill.get("txid") or fill.get("tx")
-print(f"\n   FILLED      : {json.dumps(fill)[:400]}")
+
+
+def find_sig(node):
+    """Any base58 string the right length to be a Solana signature, anywhere in the response.
+
+    The venue does not document where it puts the signature and it was not under the three names
+    this script used to try, so the whole structure gets walked instead of guessed at.
+    """
+    B58 = set("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
+    if isinstance(node, str):
+        return node if 80 <= len(node) <= 100 and set(node) <= B58 else None
+    if isinstance(node, dict):
+        node = node.values()
+    if isinstance(node, (list, tuple)) or hasattr(node, "__iter__"):
+        for v in node:
+            found = find_sig(v)
+            if found:
+                return found
+    return None
+
+
+got = fill.get("output", {}).get("amount")
+print(f"\n   FILLED      : {fill.get('status', '?')} on {fill.get('venue', '?')}, "
+      f"{quote['input']['amount']} SOL -> {got} USDC")
+sig = find_sig(fill)
 if sig:
     print(f"   solscan     : https://solscan.io/tx/{sig}")
+else:
+    print("   solscan     : the venue returned no signature; the fill is the newest transaction")
+    print("                 on the agent wallet, readable at")
+    print("                 https://solscan.io/account/" + mod.equity.AGENT)
 print("\nPhase 1 gate: both halves done on mainnet.")
