@@ -173,7 +173,10 @@
       <div class="lim"><span class="n">Maximum leverage</span><span class="v">{policy.max_leverage}×</span></div>
       <div class="lim"><span class="n">Markets</span><span class="v">{policy.allowed_markets.join(", ")}</span></div>
       <div class="lim"><span class="n">Swap tokens</span><span class="v">{policy.allowed_tokens.join(", ")}</span></div>
+      <div class="lim"><span class="n">Daily turnover budget</span><span class="v">{policy.max_daily_notional_pct_equity ?? 300}% of equity</span></div>
+      <div class="lim"><span class="n">Payment limit</span><span class="v">${policy.max_spend_usd ?? 1}</span></div>
       <div class="lim"><span class="n">Transfer destinations</span><span class="v">allowlist only</span></div>
+      <div class="lim"><span class="n">Transfer limit</span><span class="v red">{(policy.max_transfer_usd ?? 0) === 0 ? "none allowed" : `$${policy.max_transfer_usd}`}</span></div>
       <div class="lim"><span class="n">Collateral withdrawals</span><span class="v red">always refused</span></div>
       <div class="lim"><span class="n">Equity unreadable</span><span class="v red">refuse</span></div>
       <div class="lim"><span class="n">Policy unsigned or altered</span><span class="v red">refuse</span></div>
