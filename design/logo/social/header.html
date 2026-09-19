@@ -1,0 +1,46 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0}
+  .banner{position:relative;width:1500px;height:500px;overflow:hidden;background:#F4F3EF;
+    background-image:
+      linear-gradient(rgba(19,20,23,.07) 1px, transparent 1px),
+      radial-gradient(90% 120% at 86% 10%, rgba(224,58,47,.10), transparent 60%);
+    background-size:100% 34px, 100% 100%;}
+  /* the dial bleeds off the right edge: the signature object, not decoration */
+  .dial{position:absolute;right:26px;top:50%;transform:translateY(-52%);width:690px;height:auto}
+  .copy{position:absolute;left:96px;top:50%;transform:translateY(-50%);max-width:700px}
+  .word{font:800 132px/1 "Barlow Condensed",sans-serif;letter-spacing:-.02em;color:#131417;margin:0}
+  .word em{font-style:normal;color:#E03A2F}
+  .strap{margin:20px 0 0;font:400 24px/1.4 "IBM Plex Mono",monospace;color:#4A4C52;white-space:nowrap}
+  .meta{position:absolute;left:340px;bottom:58px;display:flex;gap:26px;
+    font:600 17px/1 "IBM Plex Mono",monospace;letter-spacing:.15em;text-transform:uppercase;color:#8B8D93}
+  /* the avatar sits over the bottom-left; nothing of consequence goes there */
+  .rule{position:absolute;left:0;right:0;bottom:0;height:7px;background:#E03A2F}
+</style></head>
+<body><div class="banner">
+  <div class="copy">
+    <p class="word">red<em>line</em></p>
+    <p class="strap">Kill switch for claw traders.</p>
+  </div>
+  <svg class="dial" viewBox="0 0 520 300">
+    <defs><linearGradient id="f" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8F7F3"/><stop offset="1" stop-color="#E2DFD7"/></linearGradient></defs>
+    <path d="M 40 270 A 220 220 0 0 1 480 270" fill="url(#f)" stroke="rgba(19,20,23,.16)" stroke-width="2"/>
+    <g stroke="rgba(19,20,23,.42)" stroke-width="2">
+      <line x1="40" y1="270" x2="70" y2="270"/><line x1="450" y1="270" x2="480" y2="270"/>
+      <line x1="66" y1="182" x2="94" y2="193"/><line x1="454" y1="182" x2="426" y2="193"/>
+      <line x1="124" y1="110" x2="144" y2="132"/><line x1="396" y1="110" x2="376" y2="132"/>
+      <line x1="205" y1="64" x2="214" y2="92"/><line x1="315" y1="64" x2="306" y2="92"/>
+      <line x1="260" y1="50" x2="260" y2="80"/>
+    </g>
+    <path d="M 372 96 A 220 220 0 0 1 480 270" fill="none" stroke="#E03A2F" stroke-width="16"/>
+    <g transform="rotate(62 260 270)">
+      <path d="M252 258 L268 258 L263 72 L257 72 Z" fill="#131417"/>
+      <circle cx="260" cy="270" r="17" fill="#131417"/><circle cx="260" cy="270" r="5" fill="#E2DFD7"/>
+    </g>
+  </svg>
+  <div class="meta"><span>useredline.xyz</span><span>Solana mainnet</span><span>MIT</span></div>
+  <div class="rule"></div>
+</div></body></html>
