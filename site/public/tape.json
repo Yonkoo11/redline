@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-19T09:47:21.863Z",
+ "generated_at": "2026-09-19T09:48:04.711Z",
  "source": "live agent tape",
  "policy": {
   "max_trade_pct_equity": 10,
@@ -18,7 +18,9 @@
   "allowed_destinations": [],
   "refusal_cooldown_count": 5,
   "refusal_cooldown_minutes": 30,
-  "signature": "42hRRYDdmqsSk1fPqQ92qQNHTjPX42aDQ9dNPjW19ExZZGzbhVeYVJon8UYtVoGSbUkRPDfyBeFtBWRs96Mn4xUe"
+  "max_spend_usd": 1,
+  "max_daily_notional_pct_equity": 300,
+  "signature": "41rVZs5qxPziuVM22rW8ithtWnD249ZS7aoV13NWdSZQ3Ps7e3r483kEGHaegHmLhdTMcXcWxH5Jx6oTCfKJWJSd"
  },
  "rows": [
   {
@@ -386,6 +388,49 @@
    "tool": "mcp_clawpump_swap_execute",
    "ts": 1789810110,
    "written_at": 1789810114
+  },
+  {
+   "allowed": false,
+   "equity_source": "live",
+   "equity_usd": 15.89,
+   "hash": "0f1f5181fbd54d1ee09b44df7f1b63c4d19704d0bfd229054ceca9db1faa72f2",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 14.299767190315025,
+    "token": "SOL"
+   },
+   "memo_sig": "i17XLmZZmTKYmNv7hRvsUs8RhhDAEmpsgnhZjTYEW5EABznqJUmEcgWoNmX2c6vVvuSYJHWNK1FtfzmBBHkb7Mg",
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "notional $14.30 > cap $1.59 (10.0% of equity)",
+   "rule": "trade_cap",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789811263,
+   "written_at": 1789811266
+  },
+  {
+   "allowed": true,
+   "equity_source": "live",
+   "equity_usd": 15.89,
+   "hash": "f6f6821761b5a0644e4d2de74e060e4c753b50110219c2bbdc24fdc7ffac16af",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 0.7944411996751717,
+    "token": "SOL"
+   },
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "within policy",
+   "rule": "",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789811266,
+   "written_at": 1789811270
   }
  ]
 }

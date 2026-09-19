@@ -15,5 +15,7 @@
  "allowed_destinations": [],
  "refusal_cooldown_count": 5,
  "refusal_cooldown_minutes": 30,
- "signature": "42hRRYDdmqsSk1fPqQ92qQNHTjPX42aDQ9dNPjW19ExZZGzbhVeYVJon8UYtVoGSbUkRPDfyBeFtBWRs96Mn4xUe"
+ "max_spend_usd": 1,
+ "max_daily_notional_pct_equity": 300,
+ "signature": "41rVZs5qxPziuVM22rW8ithtWnD249ZS7aoV13NWdSZQ3Ps7e3r483kEGHaegHmLhdTMcXcWxH5Jx6oTCfKJWJSd"
 }
