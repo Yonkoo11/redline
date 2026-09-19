@@ -153,14 +153,9 @@ def main() -> int:
     else:
         shutil.copy(silent, OUT)
 
-    srt = DEMO / "captions.srt"
-    if srt.exists():
-        burned = DEMO / "redline-captioned.mp4"
-        run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(OUT), "-vf",
-             f"subtitles={srt}:force_style='FontName=Helvetica,FontSize=22,"
-             f"PrimaryColour=&HFFFFFF&,BorderStyle=3,Outline=1,Shadow=0,MarginV=60'",
-             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy", str(burned)])
-        print(f"  captioned: {burned}")
+    # Captions are burned by tools/burn-captions.py, not here. This ffmpeg has no libass, so
+    # the subtitles filter does not exist; the block that used to live here failed the moment a
+    # captions.srt appeared beside the cut.
     print(f"  {OUT}  {duration(OUT):.1f}s")
     return 0
 
