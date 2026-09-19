@@ -6,4 +6,4 @@ from .tape import write as tape_write
 
 
 def wire() -> None:
-    configure(equity_reader=wallet_equity_usd, price_reader=price_usd, tape=tape_write)
+    configure(equity_reader=wallet_equity_usd, price_reader=price_usd, tape=tape_write, equity_source="live")

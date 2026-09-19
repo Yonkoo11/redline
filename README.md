@@ -2,17 +2,17 @@
 
 # Redline
 
-![refusal tests](https://img.shields.io/badge/refusal_tests-17%2F17_passing_on_fixture_venue-3fb950)
+![refusal tests](https://img.shields.io/badge/refusal_tests-20%2F20_passing-3fb950)
 [![tests](https://github.com/Yonkoo11/redline/actions/workflows/tests.yml/badge.svg)](https://github.com/Yonkoo11/redline/actions/workflows/tests.yml)
 ![runtime](https://img.shields.io/badge/Hermes_runtime_dispatch-4%2F4_cases_pass-121212)
-![tape](https://img.shields.io/badge/on--chain_refusal-devnet_1%2F1_confirmed-121212)
+![tape](https://img.shields.io/badge/on--chain_refusal-mainnet_confirmed-121212)
 [![live](https://img.shields.io/badge/live-yonkoo11.github.io%2Fredline-3fb950)](https://yonkoo11.github.io/redline/)
 
 ### Kill switch for claw traders.
 
-**Redline is a Hermes plugin that holds a ClawPump trading agent under a policy its operator wrote. Every order the agent tries passes the policy or is refused, and a refusal is written to Solana as a memo carrying the record's hash. Today: 17 refusal rules tested, the real Hermes runtime dispatching through it, and one refusal confirmed on Solana devnet.**
+**Redline is a Hermes plugin that holds a ClawPump trading agent under a policy its operator wrote. Every order the agent tries passes the policy or is refused, and a refusal is written to Solana as a memo carrying the record's hash. Today: 20 tests green, the real Hermes runtime dispatching through it, and a refusal decided from live on-chain equity and recorded on Solana mainnet.**
 
-**[ Live ↗ ](https://yonkoo11.github.io/redline/)** · **[ Verify it yourself ↗ ](#verify-it-yourself-in-60-seconds)** · **[ The devnet receipt ↗ ](https://solscan.io/tx/5SaG128xvD4GiW7CCaJRZrGtwBD2paNf9iKWuvoHELfV2u9XjkvKCYBPHRhqYFPrzuPn5SsGNH6mVFSJdieNMZfQ?cluster=devnet)** · **[ @useredline ↗ ](https://x.com/useredline)**
+**[ Live ↗ ](https://yonkoo11.github.io/redline/)** · **[ Verify it yourself ↗ ](#verify-it-yourself-in-60-seconds)** · **[ The receipt ↗ ](https://solscan.io/tx/2pFTPkGoK4y3yPkdMZ5EQd3FYnGjTNv2qwdsoBmkrzGKq2fbvQDq6eGVRQvU2Rx58WF2qfLku5sV7R5YMVZHQe29)** · **[ @useredline ↗ ](https://x.com/useredline)**
 
 Built for The AnsemHack Clawrena (ClawPump × pump.fun, Inference Markets).
 
@@ -70,7 +70,7 @@ No key, no wallet, no chain access needed for the first two checks. Every line b
 
 ```bash
 git clone https://github.com/Yonkoo11/redline && cd redline
-python3 -m unittest discover -s tests -t .          # → Ran 17 tests ... OK
+python3 -m unittest discover -s tests -t .          # → Ran 20 tests ... OK
 python3 -c "from redline.policy import *; print(evaluate(Policy(), State(), Intent('perp', 12.0, market='SOL'), 100.0, 0).reason)"
                                                     # → notional $12.00 > cap $10.00 (10.0% of equity)
 # with Hermes v2026.9.14+ installed and the plugin linked into ~/.hermes/plugins/redline:
@@ -83,22 +83,31 @@ The first check proves the rulebook. The third proves the installed Hermes runti
 
 ## The headline result
 
-Inside the real Hermes runtime (v0.21.3, 2026-09-14 build), with equity fixed at $100 and a 10% per-trade cap:
+A refusal decided from **live** equity. Redline read the ClawPump agent wallet on Solana, priced it
+through Jupiter, judged a real order against the operator's policy, refused it, and wrote the
+refusal to Solana mainnet:
 
 ```
-OVER-CAP  -> 'REDLINE refused (trade_cap): notional $100.00 > cap $10.00 (10.0% of equity)'
-IN-POLICY -> None
-READ-ONLY -> None
-RPC DOWN  -> 'REDLINE refused (equity): equity unreadable; refusing (fail closed)'
+live equity read from the agent wallet: $17.02
+in-policy order: allowed
+verdict: REDLINE refused (trade_cap): notional $15.32 > cap $1.70 (10.0% of equity)
+record hash: f1c33a948cd5647515ed32db1aef39b35b709959e340c225c0f63d226297cfd2
 ```
 
-One refusal written to Solana devnet and read back from the memo program logs:
+The memo on chain carries the hash of that record, so the tape cannot be edited after the fact:
 
 ```
-Program log: Memo (len 48): "redline:refused:0cc3938cf02060e1bc5f189fc07a0d0a"
+slot: 448238999 | err: None
+memo: redline:refused:f1c33a948cd5647515ed32db1aef39b3
 ```
 
-Live equity of the ClawPump agent wallet `FT5GaRv2eV74aS3dTPw6ZNsVBackGTW9dNQfw4jSZirz`, read from public RPC and Jupiter's price feed on 2026-09-18: `0.151 SOL × $112.90 = $17.05`. Perps collateral is not yet counted (see the honesty table).
+[Transaction 2pFTPkGo…HQe29](https://solscan.io/tx/2pFTPkGoK4y3yPkdMZ5EQd3FYnGjTNv2qwdsoBmkrzGKq2fbvQDq6eGVRQvU2Rx58WF2qfLku5sV7R5YMVZHQe29),
+tape wallet `61QDPf756rts88PADMZX2TUkqbFmdCfCCvkiwtDSuRHo`, agent wallet
+`FT5GaRv2eV74aS3dTPw6ZNsVBackGTW9dNQfw4jSZirz`. Reproduce it with
+`~/.hermes/hermes-agent/venv/bin/python tests/mainnet_gate.py`.
+
+Every record says which equity it judged against and whether that equity was live or a test
+fixture, because a refusal decided from a made-up balance proves nothing.
 
 ## Architecture
 
@@ -140,19 +149,20 @@ Stored at `~/.hermes/redline/policy.json`. Defaults:
 
 | Capability | Status |
 |---|---|
-| **Policy engine** | Real. 17 unit tests on a fixture venue, `tests/test_policy.py`, run in CI. |
+| **Policy engine** | Real. 20 unit tests, `tests/test_policy.py`, run in CI. |
 | **Hermes runtime dispatch** | Real. `tests/hermes_integration.py` passes inside the installed Hermes v0.21.3; `hermes plugins validate` clean. |
-| **Refusal on Solana** | Real on devnet, one transaction, linked above. Not yet on mainnet. |
-| **Live equity** | Measured, not asserted: SOL and USDC in the agent wallet, priced by Jupiter. Phoenix perps collateral and open positions are not counted yet; until they are, the reader under-counts, which errs toward refusing. |
-| Mainnet fill and mainnet refusal (the Phase 1 gate) | Not done. Waits on the ClawPump MCP being wired into Hermes and the tape wallet being funded. |
-| Pair-trading strategy (SOL vs ETH on Phoenix) | Not built. |
-| Decisions bought from UsePod over x402 | Not built. |
+| **Refusal on Solana mainnet, from live equity** | Real. Transaction linked above, memo matches the record hash, reproducible with `tests/mainnet_gate.py`. |
+| **Live equity** | Measured, not asserted: SOL and USDC in the agent wallet, priced by Jupiter. Phoenix perps collateral and open positions are not counted yet, so the reader under-counts, which errs toward refusing. |
+| **UsePod x402 quoting and payment** | Real, on mainnet. `redline/inference.py` quotes the live endpoint and pays in SOL. |
+| UsePod completions | Blocked, not by us. A settle request carrying a genuine payment is refused at UsePod's edge with a Cloudflare 403, while forged proofs reach their API normally. Five variables ruled out by direct test, with `cf-ray` ids, in [probe/usepod-x402-settle-block-2026-09-19.md](probe/usepod-x402-settle-block-2026-09-19.md). |
+| An in-policy order actually filling on Phoenix | Not done. Redline allows it; nothing has been sent to a venue, because the ClawPump MCP is not wired into this Hermes yet. |
+| Pair-trading strategy (SOL against ETH) | Not built. |
 | Referee mode for hosted ClawPump agents | Not claimed, anywhere in this repository. Hosted agents cannot load a plugin. |
 | Realised trading performance | Not claimed. No trade has been made. |
 
 ## Tech stack
 
-- **Plugin:** Python 3.11+, standard library only · **Tests:** 17 unit + 1 runtime integration, in CI · **Runtime:** Hermes Agent v2026.9.14+ (`pre_tool_call` hook) · **Site:** Svelte 5 + Vite, static · **Chain:** Solana mainnet, memo program via the `solana` CLI; devnet for the proof above
+- **Plugin:** Python 3.11+, standard library only · **Tests:** 20 unit + 1 runtime integration + 1 mainnet gate, in CI · **Runtime:** Hermes Agent v2026.9.14+ (`pre_tool_call` hook) · **Site:** Svelte 5 + Vite, static · **Chain:** Solana mainnet, memo program via the `solana` CLI; devnet for the proof above
 
 ## Project layout
 
@@ -164,10 +174,11 @@ redline/
   equity.py       # wallet SOL + USDC priced by Jupiter, read from Solana RPC
   tape.py         # hashed records to tape.jsonl; refusals posted as Solana memos
   runtime.py      # wires the live readers in when Hermes loads the plugin
+  inference.py    # UsePod x402: quote, pay on Solana, settle (see the honesty table)
   plugin.yaml     # Hermes manifest
-tests/            # 17 unit tests (fixture venue) + hermes_integration.py (real runtime)
+tests/            # 20 unit tests + hermes_integration.py (real runtime) + mainnet_gate.py (real chain)
 site/             # the tape page (Svelte + Vite)
-probe/            # measured facts: Phoenix markets, ClawPump token field, dated
+probe/            # measured facts, dated: Phoenix markets, ClawPump token field, UsePod quote + the settle block
 design/logo/      # the mark, wordmark, and the rounds that were rejected
 .github/workflows # tests.yml (CI), pages.yml (site)
 ```
@@ -185,7 +196,7 @@ cd site && npm install && npm run dev                             # the tape pag
 ## Tests
 
 ```bash
-python3 -m unittest discover -s tests -t .   # → Ran 17 tests ... OK
+python3 -m unittest discover -s tests -t .   # → Ran 20 tests ... OK
 ```
 
 They cover every rule in the policy table, the intent mapping for both ClawPump MCP prefixes, the block return shape, the tape record, and fail-closed behaviour when equity cannot be read. CI runs them on every push: `.github/workflows/tests.yml`.

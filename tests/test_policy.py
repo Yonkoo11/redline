@@ -108,3 +108,30 @@ class HookEndToEnd(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RecordLabelling(unittest.TestCase):
+    """Every tape record must say what equity it judged against and whether that equity was live."""
+
+    def setUp(self):
+        import tempfile, pathlib
+        tmp = pathlib.Path(tempfile.mkdtemp())
+        redline.HOME = tmp; redline.POLICY_PATH = tmp / "policy.json"; redline.STATE_PATH = tmp / "state.json"
+        self.tape = []
+
+    def test_fixture_equity_is_labelled_fixture(self):
+        redline.configure(equity_reader=lambda: 100.0, price_reader=px, tape=self.tape.append)
+        redline.pre_tool_call("mcp_clawpump_perps_order_execute", {"market": "SOL", "size": 0.5}, "t")
+        self.assertEqual(self.tape[-1]["equity_source"], "fixture")
+        self.assertEqual(self.tape[-1]["equity_usd"], 100.0)
+
+    def test_live_equity_is_labelled_live(self):
+        redline.configure(equity_reader=lambda: 42.0, price_reader=px, tape=self.tape.append, equity_source="live")
+        redline.pre_tool_call("mcp_clawpump_perps_order_execute", {"market": "SOL", "size": 0.5}, "t")
+        self.assertEqual(self.tape[-1]["equity_source"], "live")
+
+    def test_unreadable_equity_records_none(self):
+        def boom(): raise RuntimeError("rpc down")
+        redline.configure(equity_reader=boom, price_reader=px, tape=self.tape.append)
+        redline.pre_tool_call("mcp_clawpump_swap_execute", {"input_token": "SOL", "amount": 1}, "t")
+        self.assertIsNone(self.tape[-1]["equity_usd"])

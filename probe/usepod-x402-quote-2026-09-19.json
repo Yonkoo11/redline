@@ -1,0 +1,71 @@
+{
+ "x402_version": 2,
+ "x402Version": 2,
+ "quote_id": "445011c8-74c2-4998-a786-4510a9d16ffa",
+ "resource": {
+  "description": "UsePod inference: gpt-4o-mini",
+  "mimeType": "application/json",
+  "url": "https://api.usepod.ai/proxy/x402/v1/chat/completions"
+ },
+ "accepts": [
+  {
+   "x402_version": 2,
+   "quote_id": "445011c8-74c2-4998-a786-4510a9d16ffa",
+   "scheme": "exact",
+   "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+   "pay_to": "GXfqVnZENHzvim8rNN8TPwqxWXQe8EBbxhcEMYE8Z7BS",
+   "asset": "USDC",
+   "amount_microunits": 5,
+   "mode": "cap-with-surplus-credit",
+   "expires_at": "2026-09-18T23:50:20.406274183Z",
+   "method": "POST",
+   "path": "/proxy/x402/v1/chat/completions",
+   "body_hash": "070191898cdae220ae6d180d0d58e387c5640a078a473111024a364be356b42b",
+   "model": "gpt-4o-mini",
+   "balance_hint": "wallets with an x402 surplus balance may retry with scheme \"balance\": sign \"usepod-x402-spend:445011c8-74c2-4998-a786-4510a9d16ffa\" with the payer wallet and send it as payload.proof"
+  },
+  {
+   "x402_version": 2,
+   "quote_id": "445011c8-74c2-4998-a786-4510a9d16ffa",
+   "scheme": "exact",
+   "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+   "pay_to": "GXfqVnZENHzvim8rNN8TPwqxWXQe8EBbxhcEMYE8Z7BS",
+   "asset": "SOL",
+   "amount_microunits": 45,
+   "mode": "cap-with-surplus-credit",
+   "expires_at": "2026-09-18T23:50:20.406274183Z",
+   "method": "POST",
+   "path": "/proxy/x402/v1/chat/completions",
+   "body_hash": "070191898cdae220ae6d180d0d58e387c5640a078a473111024a364be356b42b",
+   "model": "gpt-4o-mini"
+  },
+  {
+   "x402_version": 2,
+   "quote_id": "445011c8-74c2-4998-a786-4510a9d16ffa",
+   "scheme": "exact",
+   "network": "eip155:8453",
+   "pay_to": "0x8715CBcE377293F83805F4B60F1490a6DC9DF19C",
+   "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+   "amount_microunits": 5,
+   "mode": "exact",
+   "expires_at": "2026-09-18T23:50:20.406274183Z",
+   "method": "POST",
+   "path": "/proxy/x402/v1/chat/completions",
+   "body_hash": "070191898cdae220ae6d180d0d58e387c5640a078a473111024a364be356b42b",
+   "model": "gpt-4o-mini",
+   "x402Version": 2,
+   "amount": "5",
+   "maxAmountRequired": "5",
+   "payTo": "0x8715CBcE377293F83805F4B60F1490a6DC9DF19C",
+   "maxTimeoutSeconds": 300,
+   "resource": "https://api.usepod.ai/proxy/x402/v1/chat/completions",
+   "description": "UsePod inference: gpt-4o-mini",
+   "mimeType": "application/json",
+   "extra": {
+    "name": "USD Coin",
+    "version": "2"
+   }
+  }
+ ],
+ "extensions": {}
+}

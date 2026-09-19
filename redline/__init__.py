@@ -10,12 +10,17 @@ POLICY_PATH = HOME / "policy.json"
 STATE_PATH = HOME / "state.json"
 
 _equity_reader = None   # callable -> Optional[float]; installed by runtime.py
+_equity_source = "unset"  # "live" once runtime.wire() runs; anything else is a test fixture
 _price_reader = lambda sym: None
 _tape = None            # callable(record: dict) -> None; installed by runtime.py
 
 
-def configure(equity_reader=None, price_reader=None, tape=None) -> None:
-    global _equity_reader, _price_reader, _tape
+def configure(equity_reader=None, price_reader=None, tape=None, equity_source=None) -> None:
+    global _equity_reader, _price_reader, _tape, _equity_source
+    if equity_source is not None:
+        _equity_source = equity_source
+    elif equity_reader is not None:
+        _equity_source = "fixture"
     _equity_reader = equity_reader or _equity_reader
     _price_reader = price_reader or _price_reader
     _tape = tape or _tape
@@ -37,9 +42,12 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str = "", **kwargs):
     policy = Policy.load(POLICY_PATH) if POLICY_PATH.exists() else Policy()
     state = State.load(STATE_PATH)
     now = time.time()
-    verdict = evaluate(policy, state, intent, _equity(), now)
+    equity = _equity()
+    verdict = evaluate(policy, state, intent, equity, now)
     record = {"ts": int(now), "tool": tool_name, "intent": intent.__dict__,
-              "allowed": verdict.allowed, "rule": verdict.rule, "reason": verdict.reason}
+              "allowed": verdict.allowed, "rule": verdict.rule, "reason": verdict.reason,
+              "equity_usd": round(equity, 2) if equity is not None else None,
+              "equity_source": _equity_source}
     if not verdict.allowed:
         record_refusal(state, now)
     state.save(STATE_PATH)

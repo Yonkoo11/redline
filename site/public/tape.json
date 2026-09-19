@@ -1,0 +1,62 @@
+{
+ "generated_at": "2026-09-19T00:00:45.213Z",
+ "policy": {
+  "max_trade_pct_equity": 10,
+  "max_daily_loss_pct": 5,
+  "max_drawdown_pct": 15,
+  "max_leverage": 2,
+  "equity_floor_usd": 5,
+  "allowed_markets": [
+   "SOL",
+   "ETH"
+  ],
+  "allowed_tokens": [
+   "SOL",
+   "USDC"
+  ],
+  "allowed_destinations": [],
+  "refusal_cooldown_count": 5,
+  "refusal_cooldown_minutes": 30
+ },
+ "rows": [
+  {
+   "allowed": true,
+   "equity_source": "live",
+   "equity_usd": 17.02,
+   "hash": "9c663e0e0109f4f0624edfeeadef3716a480eab2345ee86213fbf817f4266154",
+   "intent": {
+    "destination": null,
+    "kind": "perp",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 0.8568104112645291,
+    "token": "SOL"
+   },
+   "reason": "within policy",
+   "rule": "",
+   "tool": "mcp_clawpump_perps_order_execute",
+   "ts": 1789776006,
+   "written_at": 1789776011
+  },
+  {
+   "allowed": false,
+   "equity_source": "live",
+   "equity_usd": 17.02,
+   "hash": "f1c33a948cd5647515ed32db1aef39b35b709959e340c225c0f63d226297cfd2",
+   "intent": {
+    "destination": null,
+    "kind": "perp",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 15.319850003594084,
+    "token": "SOL"
+   },
+   "memo_sig": "2pFTPkGoK4y3yPkdMZ5EQd3FYnGjTNv2qwdsoBmkrzGKq2fbvQDq6eGVRQvU2Rx58WF2qfLku5sV7R5YMVZHQe29",
+   "reason": "notional $15.32 > cap $1.70 (10.0% of equity)",
+   "rule": "trade_cap",
+   "tool": "mcp_clawpump_perps_order_execute",
+   "ts": 1789776012,
+   "written_at": 1789776021
+  }
+ ]
+}
