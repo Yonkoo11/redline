@@ -106,12 +106,12 @@ python3 -c "from redline.policy import *; print(evaluate(Policy(verified=True), 
                                                     # → notional $12.00 > cap $10.00 (10.0% of equity)
 # with Hermes v2026.9.14+ installed and the plugin linked into ~/.hermes/plugins/redline:
 export REDLINE_OPERATOR_PUBKEY=AqRT7dJrWw4t5vcgDDh9NosgFZKSMYhywxCvHFnJTwjm
-~/.hermes/hermes-agent/venv/bin/python redline/tests/hermes_integration.py
+REDLINE_HOME=/tmp/rl ~/.hermes/hermes-agent/venv/bin/python redline/tests/hermes_integration.py
                                                     # → PASS: over-cap refused | in-policy allowed | read-only untouched | rpc-down fails closed
 hermes plugins validate ./redline                   # → Validation passed.
 ```
 
-Run them from the directory above the clone, not from inside it. The plugin directory is the Python package, which is what `hermes plugins install` lays down, so `redline` has to be importable by that name. The third command needs the operator public key because a policy that cannot be verified refuses everything, which is the behaviour, not a setup step you can skip. Run the third one twice inside half an hour and it refuses with `cooldown`: five refusals in thirty minutes stops the agent retrying, and that is the rule working.\n\nThe first check proves the rulebook. The third proves the installed Hermes runtime routes tool calls through it and honours the block. Neither touches a real venue: equity is a fixture in both. The mainnet gate is the section below, and it has passed.
+`REDLINE_HOME=/tmp/rl` on the third one is not decoration. That check feeds the plugin a fixed $100 balance, and without its own home it writes that $100 into the real state file as a high-water mark, which then reads as an 85% drawdown against a real wallet and halts it. Run them from the directory above the clone, not from inside it. The plugin directory is the Python package, which is what `hermes plugins install` lays down, so `redline` has to be importable by that name. The third command needs the operator public key because a policy that cannot be verified refuses everything, which is the behaviour, not a setup step you can skip. Run the third one twice inside half an hour and it refuses with `cooldown`: five refusals in thirty minutes stops the agent retrying, and that is the rule working.\n\nThe first check proves the rulebook. The third proves the installed Hermes runtime routes tool calls through it and honours the block. Neither touches a real venue: equity is a fixture in both. The mainnet gate is the section below, and it has passed.
 
 ## The headline result
 
