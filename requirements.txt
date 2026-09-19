@@ -1,0 +1,3 @@
+# Redline's only runtime dependency. Ed25519 verification of the operator's policy signature.
+# Everything else (Solana RPC reads, price lookups, the tape) uses the standard library.
+cryptography>=42
