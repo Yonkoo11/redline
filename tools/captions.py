@@ -36,6 +36,23 @@ def transcribe(audio: Path, out_dir: Path) -> list[dict]:
     return json.loads((out_dir / (audio.stem + ".json")).read_text())["segments"]
 
 
+# Whisper writes names the way it hears them. Correcting the spelling of a word that WAS said is
+# right; rewriting a sentence into one that was not said is not, and that line is not crossed here.
+NAMES = {
+    "Red line": "Redline", "red line": "Redline", "Redline.": "Redline.",
+    "Clawpom": "ClawPump", "Clawpum": "ClawPump", "Clawpump": "ClawPump",
+    "Claw pump": "ClawPump", "Clawpomp": "ClawPump",
+    "Solana Explorer": "Solana explorer", "Salon": "Solana",
+    "Hermes pre-tool call": "Hermes pre-tool-call",
+}
+
+
+def fix_names(text: str) -> str:
+    for wrong, right in NAMES.items():
+        text = text.replace(wrong, right)
+    return text
+
+
 def main() -> int:
     timeline = json.loads((DEMO / "timeline.json").read_text())
     lines, n = [], 0
@@ -43,7 +60,7 @@ def main() -> int:
         for take in timeline["voice"]:
             audio, at = Path(take["file"]), take["at"]
             for seg in transcribe(audio, Path(tmp)):
-                text = seg["text"].strip()
+                text = fix_names(seg["text"].strip())
                 if not text:
                     continue
                 n += 1

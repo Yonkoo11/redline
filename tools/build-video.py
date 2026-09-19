@@ -117,7 +117,11 @@ def main() -> int:
             fit(src, target, part)
             parts.append(part)
             if voice:
-                audio_bits.append((t, voice))
+                # voice_at delays a take inside its shot, so the words track the picture. In the
+                # terminal take the screen sits waiting on the network for the first seconds and
+                # the fill only lands at 24.5s; narration starting at zero finishes describing
+                # the fill four seconds before it happens.
+                audio_bits.append((t + shot.get("voice_at", 0), voice))
         t += target
 
     print(f"  total {t:.1f}s")

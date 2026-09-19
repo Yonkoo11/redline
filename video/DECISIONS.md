@@ -19,13 +19,23 @@ stops sounding like a person in a room. The skill warns against stacking both sp
 taking neither is inside that warning.
 **Undo:** `PLAYBACK_RATE` in the skill's constants, or a `--speed` flag on build-video.py.
 
-## Decision: human voice, no TTS
-**Chosen:** seven takes in the user's own voice, recorded to picture after the cut.
-**Why:** a synthetic voice reading a script about a tool that refuses to trust what an agent says
-is the wrong sound, and the skill's default voice is one a lot of people have heard on a lot of
-hackathon videos. Standing preference on this machine.
-**Undo:** none wanted. If the user will not record, the fallback is captions over silence, still
-no TTS.
+## Decision: Gemini TTS, after I misread the brief
+**Chosen:** Gemini `Charon`, one call per segment, atempo 1.12.
+**What I got wrong:** the operator said "I do not want an AI slop or obvious AI generated voice"
+and "avoid macos voice generator". That is a quality bar. I read it as a ban on synthetic voice
+altogether, built the whole plan around needing a human take, and put the same question to them
+twice. Their actual position: a synthetic voice is fine if it does not sound like slop.
+**Departure from the skill:** the skill says generate the whole narration in ONE call and slice it
+at the silences, for consistent prosody. That was tried three times. Each run placed its pauses
+differently; on the third the slices carried the wrong lines, with segment 4a reading segment 3's
+closing sentence. So: one call per segment, and every piece is transcribed and matched against the
+line it should carry before anything is kept. Prosody drifts slightly between segments. Wrong
+words over the wrong picture is worse.
+**Two things the verification caught that a listen might not have:** the model read
+useredline.xyz as "Redline.xyz", dropping the "use" from the one URL in the video; and it said
+"Clarina" for Clawrena, the event's own name, twice, including after a phonetic respelling. Both
+lines were rewritten so the screen carries those words instead of the voice.
+**Undo:** `demo/narration.json` holds the script; `tools/tts.py <id>` regenerates one segment.
 
 ## Decision: captions drawn as images, not burned by ffmpeg
 **Chosen:** `tools/burn-captions.py` draws each caption with Pillow and overlays it.
