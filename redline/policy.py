@@ -5,6 +5,8 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Optional
 
+from .signing import verify_policy
+
 GOVERNED = {
     "perps_order_execute": "perp",
     "swap_execute": "swap",
@@ -39,11 +41,24 @@ class Policy:
     refusal_cooldown_count: int = 5
     refusal_cooldown_minutes: int = 30
 
+    # Not a limit: whether these limits were signed by the pinned operator key.
+    # Set only by load(). An unverified policy refuses everything.
+    verified: bool = False
+    unverified_reason: str = "policy was never loaded from a signed file"
+
     @classmethod
-    def load(cls, path: Path) -> "Policy":
+    def load(cls, path: Path, operator_pubkey: Optional[str] = None) -> "Policy":
+        """Read a policy and check the operator's signature over it.
+
+        A bad, missing or unpinned signature does NOT raise and does NOT fall back to defaults.
+        The limits load as written and the policy is marked unverified, so evaluate() refuses
+        every governed call with a reason the operator can read."""
         data = json.loads(Path(path).read_text())
+        ok, why = verify_policy(data, operator_pubkey)
         data.pop("signature", None)
-        return cls(**data)
+        data.pop("verified", None)
+        data.pop("unverified_reason", None)
+        return cls(**data, verified=ok, unverified_reason=why)
 
 
 @dataclass
@@ -102,6 +117,8 @@ def _cooldown_active(policy: Policy, state: State, now: float) -> bool:
 def evaluate(policy: Policy, state: State, intent: Intent,
              equity_usd: Optional[float], now: float) -> Verdict:
     """The whole rulebook. Order matters: hard stops first, sizing last."""
+    if not policy.verified:
+        return Verdict(False, f"policy not verified: {policy.unverified_reason}", "unsigned_policy")
     if state.halted:
         return Verdict(False, f"halted: {state.halt_reason}", "halt")
     if equity_usd is None:

@@ -9,6 +9,10 @@ HOME = Path(os.environ.get("REDLINE_HOME", Path.home() / ".hermes" / "redline"))
 POLICY_PATH = HOME / "policy.json"
 STATE_PATH = HOME / "state.json"
 
+# The operator's Ed25519 public key, base58. Pinned in the environment, not in a file the agent
+# can rewrite. Absent means no policy can verify, which means every governed call is refused.
+OPERATOR_PUBKEY_ENV = "REDLINE_OPERATOR_PUBKEY"
+
 _equity_reader = None   # callable -> Optional[float]; installed by runtime.py
 _equity_source = "unset"  # "live" once runtime.wire() runs; anything else is a test fixture
 _price_reader = lambda sym: None
@@ -39,7 +43,9 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str = "", **kwargs):
     if intent is None:
         return None
     HOME.mkdir(parents=True, exist_ok=True)
-    policy = Policy.load(POLICY_PATH) if POLICY_PATH.exists() else Policy()
+    pubkey = os.environ.get(OPERATOR_PUBKEY_ENV)
+    policy = (Policy.load(POLICY_PATH, pubkey) if POLICY_PATH.exists()
+              else Policy(unverified_reason=f"no policy file at {POLICY_PATH}"))
     state = State.load(STATE_PATH)
     now = time.time()
     equity = _equity()
@@ -47,7 +53,8 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str = "", **kwargs):
     record = {"ts": int(now), "tool": tool_name, "intent": intent.__dict__,
               "allowed": verdict.allowed, "rule": verdict.rule, "reason": verdict.reason,
               "equity_usd": round(equity, 2) if equity is not None else None,
-              "equity_source": _equity_source}
+              "equity_source": _equity_source,
+              "policy_verified": policy.verified}
     if not verdict.allowed:
         record_refusal(state, now)
     state.save(STATE_PATH)

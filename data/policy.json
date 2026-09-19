@@ -14,5 +14,6 @@
  ],
  "allowed_destinations": [],
  "refusal_cooldown_count": 5,
- "refusal_cooldown_minutes": 30
+ "refusal_cooldown_minutes": 30,
+ "signature": "42hRRYDdmqsSk1fPqQ92qQNHTjPX42aDQ9dNPjW19ExZZGzbhVeYVJon8UYtVoGSbUkRPDfyBeFtBWRs96Mn4xUe"
 }

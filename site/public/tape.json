@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-19T07:02:37.137Z",
+ "generated_at": "2026-09-19T07:13:51.376Z",
  "source": "live agent tape",
  "policy": {
   "max_trade_pct_equity": 10,
@@ -17,7 +17,8 @@
   ],
   "allowed_destinations": [],
   "refusal_cooldown_count": 5,
-  "refusal_cooldown_minutes": 30
+  "refusal_cooldown_minutes": 30,
+  "signature": "42hRRYDdmqsSk1fPqQ92qQNHTjPX42aDQ9dNPjW19ExZZGzbhVeYVJon8UYtVoGSbUkRPDfyBeFtBWRs96Mn4xUe"
  },
  "rows": [
   {
@@ -97,6 +98,68 @@
    "tool": "mcp_clawpump_swap_execute",
    "ts": 1789801202,
    "written_at": 1789801205
+  },
+  {
+   "allowed": false,
+   "equity_source": "live",
+   "equity_usd": 16.91,
+   "hash": "32deca8829eaaf54e0def289a963bff0a7f55b3a9d8aa855cda70fba1a3dcd33",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 15.219369274750623,
+    "token": "SOL"
+   },
+   "memo_sig": "2HK7gLCHvCadHKfrMPe6A8JtdKorPJF5fcTXyGZpZFRdegXgpnc4vATWpMYAfiukUQuPW8dVeguyq3LfQ3ndKTmv",
+   "policy_verified": true,
+   "reason": "notional $15.22 > cap $1.69 (10.0% of equity)",
+   "rule": "trade_cap",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789801925,
+   "written_at": 1789801929
+  },
+  {
+   "allowed": true,
+   "equity_source": "live",
+   "equity_usd": 16.91,
+   "hash": "eff29d5f9f410d82046afbe4f8673e6e064b80801882fbace0d9e55d0fa5624f",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 0.8455205152639236,
+    "token": "SOL"
+   },
+   "policy_verified": true,
+   "reason": "within policy",
+   "rule": "",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789801929,
+   "written_at": 1789801930
+  },
+  {
+   "allowed": false,
+   "equity_source": "live",
+   "equity_usd": 16.91,
+   "hash": "c260b9bb2b82ed4ee6bde1c8f99ac4b78a34cf76b5e1fa1911025a8841cba171",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 15.223086410625267,
+    "token": "SOL"
+   },
+   "memo_sig": "5WJzKt5HgccYA8xh2stRZ63YzUT7D1G2H1wruYqxo7GzwrGgeEZofLW2fwQghka4eso5HfDdci3aW1if4ZKRSfGT",
+   "policy_verified": false,
+   "reason": "policy not verified: no operator public key pinned (set REDLINE_OPERATOR_PUBKEY)",
+   "rule": "unsigned_policy",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789801944,
+   "written_at": 1789801950
   }
  ]
 }

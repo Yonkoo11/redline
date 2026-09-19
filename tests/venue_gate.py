@@ -33,6 +33,10 @@ def mcp(tool, args):
     return json.loads(env["result"]["content"][0]["text"])
 
 
+if not os.environ.get("REDLINE_OPERATOR_PUBKEY"):
+    sys.exit("REDLINE_OPERATOR_PUBKEY is not set, so no policy can verify and every call would be\n"
+             "refused as unsigned. Run:  python -m redline.sign keygen   then export the key it prints.")
+
 sys.path.insert(0, HERMES)
 os.chdir(HERMES)
 import hermes_cli.plugins as P

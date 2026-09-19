@@ -6,6 +6,10 @@
 
   let tape = $state([]);
   let policy = $state(null);
+
+  // The operator public key these published limits are signed with. Public by design: it is what
+  // lets a reader check the signature without asking us for anything.
+  const OPERATOR_KEY = "AqRT7dJrWw4t5vcgDDh9NosgFZKSMYhywxCvHFnJTwjm";
   let equity = $state(null);
   let failed = $state(false);
   let copied = $state(false);
@@ -68,7 +72,7 @@
       <h1>Kill switch for <em>claw traders</em>.</h1>
       <p class="sub">
         An agent may trade as hard as it likes, right up to the line. It cannot cross it. Redline sits
-        between the model and the wallet: every order passes the policy its operator set, or it is
+        between the model and the wallet: every order passes the policy its operator signed, or it is
         refused and the refusal is written to Solana.
       </p>
       <p class="claim">
@@ -115,7 +119,7 @@
         <div>
           <span class="lbl">Cap per order</span>
           <div class="val red">{cap === null ? "—" : money(cap)}</div>
-          <div class="note">10% of equity, from the operator's policy</div>
+          <div class="note">10% of equity, from the signed policy</div>
         </div>
       </div>
 
@@ -162,7 +166,7 @@
   {/each}
 
   <div class="section-head">
-    <h2>The policy</h2><span class="lbl">set by the operator, enforced on every call</span>
+    <h2>The policy</h2><span class="lbl">signed by the operator, enforced on every call</span>
   </div>
   {#if policy}
     <div class="policy">
@@ -175,7 +179,27 @@
       <div class="lim"><span class="n">Transfer destinations</span><span class="v">allowlist only</span></div>
       <div class="lim"><span class="n">Collateral withdrawals</span><span class="v red">always refused</span></div>
       <div class="lim"><span class="n">Equity unreadable</span><span class="v red">refuse</span></div>
+      <div class="lim"><span class="n">Policy unsigned or altered</span><span class="v red">refuse</span></div>
     </div>
+
+    {#if policy.signature}
+      <div class="sig">
+        <div class="sig-row">
+          <span class="lbl">Operator key</span>
+          <code>{OPERATOR_KEY}</code>
+        </div>
+        <div class="sig-row">
+          <span class="lbl">Signature over these limits</span>
+          <code>{policy.signature.slice(0, 22)}…{policy.signature.slice(-8)}</code>
+        </div>
+        <p class="sig-note">
+          The limits above are signed with a key the agent does not hold. Change one number and the
+          signature stops matching, and Redline refuses every order until an operator signs again.
+          Check it yourself:
+        </p>
+        <code class="sig-cmd">python -m redline.sign check policy.json</code>
+      </div>
+    {/if}
   {/if}
 
   <section class="install">
@@ -271,6 +295,17 @@
   .lim{display:flex;align-items:baseline;gap:var(--s3);padding:var(--s3) 0;border-bottom:1px solid var(--rule-soft)}
   .lim .n{flex:1;font-size:14px;color:var(--ink-2)}
   .lim .v{font:600 15px/1 "IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+
+  .sig{margin-top:var(--s6);padding:var(--s5);border-radius:var(--r-md);
+       background:var(--paper-2);box-shadow:var(--e-1)}
+  .sig-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s3);
+           padding:var(--s2) 0;border-bottom:1px solid var(--rule-soft)}
+  .sig-row .lbl{flex:1;min-width:180px}
+  .sig-row code{font:500 13px/1.5 "IBM Plex Mono",monospace;color:var(--ink-2);word-break:break-all}
+  .sig-note{margin:var(--s4) 0 var(--s3);font-size:14px;line-height:1.6;color:var(--ink-2);max-width:62ch}
+  .sig-cmd{display:block;padding:var(--s3) var(--s4);border-radius:var(--r-sm);
+           background:var(--ink);color:var(--paper);
+           font:500 13px/1.5 "IBM Plex Mono",monospace;overflow-x:auto}
   .lim .v.red{color:var(--red)}
 
   .install{margin:var(--s16) 0 var(--s24);padding:var(--s8);background:var(--ink);color:var(--paper);border-radius:var(--r-lg);box-shadow:var(--e-3)}

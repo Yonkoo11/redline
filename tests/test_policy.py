@@ -13,7 +13,8 @@ def px(sym):
 
 class Fixture(unittest.TestCase):
     def setUp(self):
-        self.p = Policy(max_trade_pct_equity=10, max_daily_loss_pct=5, max_drawdown_pct=15, max_leverage=2)
+        self.p = Policy(max_trade_pct_equity=10, max_daily_loss_pct=5, max_drawdown_pct=15, max_leverage=2,
+                        verified=True, unverified_reason="")
         self.s = State()
 
     def test_in_policy_perp_allowed(self):
@@ -85,12 +86,34 @@ class IntentMapping(unittest.TestCase):
 
 
 class HookEndToEnd(unittest.TestCase):
+    """Runs the real signing path: a real key, a real signature, a real pinned public key."""
+
     def setUp(self):
-        import tempfile, pathlib
+        import tempfile, pathlib, json, os
+        from redline.sign import keygen
+        from redline.signing import sign_policy
         self.tmp = pathlib.Path(tempfile.mkdtemp())
         redline.HOME = self.tmp; redline.POLICY_PATH = self.tmp / "policy.json"; redline.STATE_PATH = self.tmp / "state.json"
+        self.key = self.tmp / "operator-key.json"
+        pub = keygen(self.key)
+        redline.POLICY_PATH.write_text(json.dumps({
+            "max_trade_pct_equity": 10, "max_daily_loss_pct": 5, "max_drawdown_pct": 15,
+            "max_leverage": 2, "equity_floor_usd": 5,
+            "allowed_markets": ["SOL", "ETH"], "allowed_tokens": ["SOL", "USDC"],
+            "allowed_destinations": [], "refusal_cooldown_count": 5,
+            "refusal_cooldown_minutes": 30}))
+        sign_policy(redline.POLICY_PATH, self.key)
+        self._old_pub = os.environ.get("REDLINE_OPERATOR_PUBKEY")
+        os.environ["REDLINE_OPERATOR_PUBKEY"] = pub
         self.tape = []
         redline.configure(equity_reader=lambda: 100.0, price_reader=px, tape=self.tape.append)
+
+    def tearDown(self):
+        import os
+        if self._old_pub is None:
+            os.environ.pop("REDLINE_OPERATOR_PUBKEY", None)
+        else:
+            os.environ["REDLINE_OPERATOR_PUBKEY"] = self._old_pub
 
     def test_block_shape_and_tape(self):
         out = redline.pre_tool_call("mcp_clawpump_perps_order_execute", {"market": "SOL", "size": 0.5}, "t1")
@@ -182,3 +205,70 @@ def test_perps_lots_only_order_is_unpriceable():
                          {"symbol": "SOL", "side": "bid", "numBaseLots": 4,
                           "confirmRisk": True, "idempotencyKey": "redline-test-0002"}, _px)
     assert i.notional_usd is None
+
+
+class OperatorSignature(unittest.TestCase):
+    """The claim on the page is that the limits are the operator's. These prove it."""
+
+    def setUp(self):
+        import tempfile, pathlib, json
+        from redline.sign import keygen
+        from redline.signing import sign_policy
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+        self.key = self.tmp / "k.json"
+        self.pub = keygen(self.key)
+        self.path = self.tmp / "policy.json"
+        self.limits = {"max_trade_pct_equity": 10, "max_daily_loss_pct": 5,
+                       "max_drawdown_pct": 15, "max_leverage": 2, "equity_floor_usd": 5,
+                       "allowed_markets": ["SOL"], "allowed_tokens": ["SOL", "USDC"],
+                       "allowed_destinations": [], "refusal_cooldown_count": 5,
+                       "refusal_cooldown_minutes": 30}
+        self.path.write_text(json.dumps(self.limits))
+        sign_policy(self.path, self.key)
+
+    def test_a_signed_policy_verifies(self):
+        p = Policy.load(self.path, self.pub)
+        self.assertTrue(p.verified)
+        self.assertEqual(p.max_trade_pct_equity, 10)
+
+    def test_raising_your_own_cap_breaks_the_signature(self):
+        """The whole point: an agent that edits the file cannot re-sign it."""
+        import json
+        d = json.loads(self.path.read_text())
+        d["max_trade_pct_equity"] = 100            # the agent helps itself
+        self.path.write_text(json.dumps(d))
+        p = Policy.load(self.path, self.pub)
+        self.assertFalse(p.verified)
+        self.assertIn("altered", p.unverified_reason)
+
+    def test_an_unverified_policy_refuses_everything(self):
+        import json
+        d = json.loads(self.path.read_text())
+        d["max_drawdown_pct"] = 99
+        self.path.write_text(json.dumps(d))
+        p = Policy.load(self.path, self.pub)
+        v = evaluate(p, State(), Intent("perp", 0.01, market="SOL"), 100.0, time.time())
+        self.assertFalse(v.allowed)
+        self.assertEqual(v.rule, "unsigned_policy")
+
+    def test_no_pinned_key_refuses(self):
+        p = Policy.load(self.path, None)
+        self.assertFalse(p.verified)
+        self.assertIn("no operator public key pinned", p.unverified_reason)
+
+    def test_a_different_key_does_not_pass(self):
+        other = self.tmp / "other.json"
+        from redline.sign import keygen
+        other_pub = keygen(other)
+        p = Policy.load(self.path, other_pub)
+        self.assertFalse(p.verified)
+
+    def test_signature_survives_reformatting_but_not_reordering_values(self):
+        """Canonical form means whitespace is irrelevant and values are not."""
+        import json
+        d = json.loads(self.path.read_text())
+        self.path.write_text(json.dumps(d, indent=4))          # same values, new layout
+        self.assertTrue(Policy.load(self.path, self.pub).verified)
+        d["allowed_tokens"] = ["SOL", "USDC", "BONK"]          # one extra token
+        self.path.write_text(json.dumps(d))
+        self.assertFalse(Policy.load(self.path, self.pub).verified)
