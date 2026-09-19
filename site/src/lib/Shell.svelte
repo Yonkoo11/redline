@@ -38,6 +38,8 @@
   <footer>
     <a href="https://github.com/Yonkoo11/redline">Source</a>
     <a href="https://x.com/useredline">@useredline</a>
+    <a href="https://pump.fun/coin/DCma6fRtqQJdPXsxr8wmZzNvqbGzKxuBaAQYoeQyjohs">$REDLINE</a>
+    <a href="https://t.me/useredlinexyz">Telegram</a>
     <span>The AnsemHack Clawrena</span>
   </footer>
 </div>

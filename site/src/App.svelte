@@ -11,6 +11,10 @@
   // The operator public key these published limits are signed with. Public by design: it is what
   // lets a reader check the signature without asking us for anything.
   const OPERATOR_KEY = "AqRT7dJrWw4t5vcgDDh9NosgFZKSMYhywxCvHFnJTwjm";
+
+  // The project token. Listed here because a reader who wants it should not have to hunt, and
+  // because nothing on this page depends on it: the tool works with the token ignored.
+  const MINT = "DCma6fRtqQJdPXsxr8wmZzNvqbGzKxuBaAQYoeQyjohs";
   let equity = $state(null);
   let failed = $state(false);
   let copied = $state(false);
