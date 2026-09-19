@@ -16,3 +16,9 @@ jobs:
       # name. Tests import `redline.policy`, so the parent has to be on the path.
       - run: python -m pytest tests -q
         working-directory: redline
+      # The page has its own logic and its own way of breaking: a record shape it has never seen
+      # threw inside a render and emptied the live site. Node's built-in runner, no dependencies.
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: node --test site/src/lib/
+        working-directory: redline

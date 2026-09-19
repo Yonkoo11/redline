@@ -1,5 +1,6 @@
 <script>
   import Shell from "./lib/Shell.svelte";
+  import { describe as what, isOperator, money, shortSig as short, verdictOf, whenUTC as when } from "./lib/record.js";
   const RPC = "https://solana-rpc.publicnode.com";
   const AGENT = "FT5GaRv2eV74aS3dTPw6ZNsVBackGTW9dNQfw4jSZirz";
   const SOL = "So11111111111111111111111111111111111111112";
@@ -28,36 +29,6 @@
     return Math.max(REST, Math.min(HARD, REST + (106 * ratio) / 9));
   });
 
-  // The tape carries more than orders. An operator action (declaring an outflow, clearing a halt)
-  // and an internal error have no order attached, and reading through a missing one used to throw
-  // and take the whole list with it.
-  const isOperator = (r) => String(r.tool ?? "").startsWith("operator:");
-  const KINDS = { perp: "Perpetual", swap: "Swap", transfer: "Transfer",
-                  withdraw: "Withdrawal", spend: "Payment" };
-
-  function verdictOf(r) {
-    if (isOperator(r)) return "Operator";
-    if (r.would_refuse) return "Watched";
-    return r.allowed ? "Allowed" : "Refused";
-  }
-
-  function what(r) {
-    if (isOperator(r)) {
-      return r.rule === "day_reset" ? "Day rebaselined"
-           : r.rule === "halt_clear" ? "Halt cleared"
-           : "Operator action";
-    }
-    const i = r.intent;
-    if (!i) return r.rule === "internal_error" ? "Redline could not decide" : "Order";
-    const parts = [KINDS[i.kind] ?? i.kind ?? "Order"];
-    if (i.market) parts.push(i.market);
-    if (i.notional_usd) parts.push(`${money(i.notional_usd)} notional`);
-    return parts.join(", ");
-  }
-
-  const money = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const when = (ts) => new Date(ts * 1000).toISOString().replace("T", " ").slice(0, 16) + " UTC";
-  const short = (s) => s.slice(0, 8) + "…" + s.slice(-5);
 
   fetch("tape.json")
     .then((r) => r.json())

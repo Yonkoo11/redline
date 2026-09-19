@@ -1,5 +1,6 @@
 <script>
   import Shell from "./lib/Shell.svelte";
+  import { describe as what, isOperator, money, shortSig as short, whenUTC as when } from "./lib/record.js";
 
   const PATH = "~/.hermes/redline/tape.jsonl";
 
@@ -9,11 +10,10 @@
   let dragging = $state(false);
   let filters = $state([]);          // [{field, value, exclude}]
 
-  const money = (n) => (n === null || n === undefined ? "" : `$${Number(n).toFixed(2)}`);
-  const when = (ts) => new Date(ts * 1000).toISOString().replace("T", " ").slice(0, 16) + " UTC";
-  const short = (s) => (s ? s.slice(0, 10) + "…" + s.slice(-6) : "");
 
+  // Lowercase here because this page filters on the value; the shared module returns the label.
   function verdictOf(r) {
+    if (isOperator(r)) return "operator";
     if (r.would_refuse) return "watched";
     return r.allowed ? "allowed" : "refused";
   }
@@ -62,7 +62,7 @@
   );
 
   const counts = $derived.by(() => {
-    const c = { allowed: 0, refused: 0, watched: 0 };
+    const c = { allowed: 0, refused: 0, watched: 0, operator: 0 };
     for (const r of rows) c[verdictOf(r)]++;
     return c;
   });
@@ -143,15 +143,12 @@
 
     {#each shown as r, i}
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <div class="rec" class:refused={verdictOf(r) === "refused"} class:watched={verdictOf(r) === "watched"}>
+      <div class="rec" class:refused={verdictOf(r) === "refused"} class:watched={verdictOf(r) === "watched"} class:operator={verdictOf(r) === "operator"}>
         <button class="verdict {verdictOf(r)}" onclick={() => addFilter("verdict", verdictOf(r), false)}>
-          {verdictOf(r) === "watched" ? "Watched" : r.allowed ? "Allowed" : "Refused"}
+          {verdictOf(r).charAt(0).toUpperCase() + verdictOf(r).slice(1)}
         </button>
         <div class="body" onclick={() => toggleOpen(i)}>
-          <div class="what"
-            >{r.intent?.kind === "perp" ? "Perpetual" : r.intent?.kind === "swap" ? "Swap" : r.intent?.kind}{#if r.intent?.market}, <button
-              class="inline" onclick={(e) => { e.stopPropagation(); addFilter("market", r.intent.market, false); }}
-              >{r.intent.market}</button>{/if}{#if r.intent?.notional_usd}, <span class="nb">{money(r.intent.notional_usd)} notional</span>{/if}</div>
+          <div class="what">{what(r)}</div>
           <div class="why">{r.reason}</div>
           <div class="meta">
             <span>{when(r.ts)}</span>
