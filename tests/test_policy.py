@@ -135,3 +135,50 @@ class RecordLabelling(unittest.TestCase):
         redline.configure(equity_reader=boom, price_reader=px, tape=self.tape.append)
         redline.pre_tool_call("mcp_clawpump_swap_execute", {"input_token": "SOL", "amount": 1}, "t")
         self.assertIsNone(self.tape[-1]["equity_usd"])
+
+
+# --- argument shapes verified against the live ClawPump MCP on 2026-09-19 ---
+
+def _px(sym):
+    return {"SOL": 111.56, "USDC": 1.0}.get(sym)
+
+
+def test_swap_amount_is_smallest_units_not_base_units():
+    """swap_execute sizes in lamports. 0.01 SOL must price as ~$1.12, not $1.1e9."""
+    from redline.intent import intent_from_call
+    i = intent_from_call("mcp_clawpump_swap_execute",
+                         {"input_mint": "SOL", "output_mint": "USDC", "amount": "10000000"}, _px)
+    assert i is not None and abs(i.notional_usd - 1.1156) < 0.001
+
+
+def test_swap_of_a_token_with_unknown_decimals_is_unpriceable():
+    from redline.intent import intent_from_call
+    i = intent_from_call("mcp_clawpump_swap_execute",
+                         {"input_mint": "CLAW", "output_mint": "SOL", "amount": "1000000"},
+                         lambda s: 0.5)
+    assert i is not None and i.notional_usd is None      # -> refused by the policy
+
+
+def test_usdc_swap_uses_six_decimals():
+    from redline.intent import intent_from_call
+    i = intent_from_call("mcp_clawpump_swap_execute",
+                         {"input_mint": "USDC", "output_mint": "SOL", "amount": "5000000"}, _px)
+    assert abs(i.notional_usd - 5.0) < 0.001
+
+
+def test_perps_quantity_stays_base_units():
+    """perps_order_execute quantity is base units: 0.02 SOL is ~$2.23, not 2.2e-8."""
+    from redline.intent import intent_from_call
+    i = intent_from_call("mcp_clawpump_perps_order_execute",
+                         {"symbol": "SOL", "side": "bid", "quantity": 0.02,
+                          "confirmRisk": True, "idempotencyKey": "redline-test-0001"}, _px)
+    assert abs(i.notional_usd - 2.2312) < 0.001
+
+
+def test_perps_lots_only_order_is_unpriceable():
+    """numBaseLots has no lot size here, so it must refuse rather than guess."""
+    from redline.intent import intent_from_call
+    i = intent_from_call("mcp_clawpump_perps_order_execute",
+                         {"symbol": "SOL", "side": "bid", "numBaseLots": 4,
+                          "confirmRisk": True, "idempotencyKey": "redline-test-0002"}, _px)
+    assert i.notional_usd is None

@@ -56,7 +56,6 @@
     </svg>
     <span class="brandword">redline</span>
     <span class="spacer"></span>
-    <span class="lbl">Solana mainnet</span>
   </header>
 
   <div class="state">
