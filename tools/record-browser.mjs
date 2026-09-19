@@ -72,11 +72,22 @@ async function explorer(name, sig, findText, tab) {
   await shot(name, async (page) => {
     await page.goto(`https://explorer.solana.com/tx/${sig}`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(7000);
+    // The evidence on these pages is one row in a table surrounded by compute-unit counts and
+    // program logs. At full page width it is a few small characters and nothing tells a viewer
+    // where to look. Zooming the page makes the row the subject, at the browser's own resolution.
+    await page.evaluate(() => { document.body.style.zoom = "1.6"; });
+    await page.waitForTimeout(500);
     if (tab) {
-      // The tabs are in-page anchors (href="#tokens"), not a router. The balance that actually
-      // moved lives down there, not in the summary at the top.
-      await page.locator(`a[href="#${tab}"]`).first().click({ timeout: 4000 }).catch(() => {});
-      await page.waitForTimeout(3000);
+      // Scroll to the row that IS the evidence, by its own number, rather than to a tab label.
+      // Clicking the "#tokens" anchor once landed this shot on the Accounts tab instead, showing
+      // a list of program balances and not the USDC that actually moved.
+      // Open the tab first: the token rows do not exist in the DOM until it is selected, so
+      // scrolling to the number before clicking finds nothing and leaves the shot on the summary.
+      await page.locator('a[href="#tokens"]').first().click({ timeout: 4000 }).catch(() => {});
+      await page.waitForTimeout(1500);
+      await page.getByText(tab, { exact: false }).first()
+        .scrollIntoViewIfNeeded({ timeout: 4000 }).catch(() => {});
+      await page.waitForTimeout(2600);
     }
     if (findText) {
       // Short timeout on purpose. The default is 30 seconds, and a target that never becomes
@@ -89,7 +100,9 @@ async function explorer(name, sig, findText, tab) {
   });
 }
 if (refusalSig) await explorer("shot-4a-refusal", refusalSig, "redline:refused");
-if (fillSig) await explorer("shot-4b-fill", fillSig, null, "tokens");
+// "2.387438" is the agent wallet's USDC balance after the fill: the one number in this page
+// that proves the allowed order arrived.
+if (fillSig) await explorer("shot-4b-fill", fillSig, null, "2.387438");
 
 // Shot 6: the page, held still. No end-card.
 await shot("shot-6-hold", async (page) => {

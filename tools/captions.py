@@ -13,6 +13,7 @@ audio disagree and anyone reading along catches it.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -31,6 +32,10 @@ def stamp(seconds: float) -> str:
 
 MAX_SECONDS = 4.6        # longer than this and a caption sits on screen past its welcome
 MAX_WORDS = 11
+# A caption must not end on a word that is still reaching for the next one. Breaking after "of"
+# leaves the reader hanging mid-phrase: "...landing 79 cents of" / "USDC into the agent wallet."
+DANGLING = {"of", "the", "a", "an", "and", "to", "in", "on", "at", "for", "with", "from", "that",
+            "is", "was", "its", "it", "as", "by", "into", "then", "so", "but", "or", "through"}
 
 
 def transcribe(audio: Path, out_dir: Path) -> list[dict]:
@@ -58,8 +63,11 @@ def transcribe(audio: Path, out_dir: Path) -> list[dict]:
         span = cur[-1]["end"] - cur[0]["start"]
         ends_sentence = text.endswith((".", "!", "?"))
         long_enough = span >= 2.2 or len(cur) >= 7
-        if ends_sentence or (text.endswith(",") and long_enough) \
-                or span >= MAX_SECONDS or len(cur) >= MAX_WORDS:
+        last = re.sub(r"[^a-z']", "", cur[-1]["word"].lower())
+        dangling = last in DANGLING and not ends_sentence
+        hard_limit = span >= MAX_SECONDS + 0.9 or len(cur) >= MAX_WORDS + 3
+        if (not dangling and (ends_sentence or (text.endswith(",") and long_enough)
+                              or span >= MAX_SECONDS or len(cur) >= MAX_WORDS)) or hard_limit:
             lines.append({"start": cur[0]["start"], "end": cur[-1]["end"], "text": text})
             cur = []
     if cur:
