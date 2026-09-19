@@ -1,5 +1,6 @@
 {
- "generated_at": "2026-09-19T00:00:45.213Z",
+ "generated_at": "2026-09-19T00:03:55.984Z",
+ "source": "committed snapshot",
  "policy": {
   "max_trade_pct_equity": 10,
   "max_daily_loss_pct": 5,

@@ -1,0 +1,18 @@
+{
+ "max_trade_pct_equity": 10,
+ "max_daily_loss_pct": 5,
+ "max_drawdown_pct": 15,
+ "max_leverage": 2,
+ "equity_floor_usd": 5,
+ "allowed_markets": [
+  "SOL",
+  "ETH"
+ ],
+ "allowed_tokens": [
+  "SOL",
+  "USDC"
+ ],
+ "allowed_destinations": [],
+ "refusal_cooldown_count": 5,
+ "refusal_cooldown_minutes": 30
+}

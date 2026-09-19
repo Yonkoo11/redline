@@ -68,3 +68,4 @@ site/node_modules/
 site/dist/
 .claude/
 probe/README.md
+site/public/tape.json

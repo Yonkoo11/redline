@@ -162,7 +162,7 @@ Stored at `~/.hermes/redline/policy.json`. Defaults:
 
 ## Tech stack
 
-- **Plugin:** Python 3.11+, standard library only · **Tests:** 20 unit + 1 runtime integration + 1 mainnet gate, in CI · **Runtime:** Hermes Agent v2026.9.14+ (`pre_tool_call` hook) · **Site:** Svelte 5 + Vite, static · **Chain:** Solana mainnet, memo program via the `solana` CLI; devnet for the proof above
+- **Plugin:** Python 3.11+, standard library only · **Tests:** 20 unit + 1 runtime integration + 1 mainnet gate, in CI · **Runtime:** Hermes Agent v2026.9.14+ (`pre_tool_call` hook) · **Site:** Svelte 5 + Vite, static · **Chain:** Solana mainnet, memo program via the `solana` CLI
 
 ## Project layout
 
