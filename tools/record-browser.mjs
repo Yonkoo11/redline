@@ -2,7 +2,7 @@
 // so nothing else on the desktop can end up in the frame. A window grab has leaked twice.
 //
 //   node tools/record-browser.mjs                 # shots 1, 2 and 6
-//   node tools/record-browser.mjs <refusal-sig>   # adds shot 4, the Solscan proof
+//   node tools/record-browser.mjs <refusal-sig> <fill-sig>   # adds shot 4, the Solscan proof
 //
 // Output: demo/shot-<n>.webm, 1920x1080, 25fps. Remux to h264 before editing.
 import { chromium } from "playwright";
@@ -11,7 +11,7 @@ import { join } from "node:path";
 
 const SITE = "https://useredline.xyz/";
 const OUT = "demo";
-const sig = process.argv[2] || null;
+const [refusalSig, fillSig] = process.argv.slice(2);
 
 mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ channel: "chrome" });
@@ -46,15 +46,26 @@ await shot("shot-2-dial", async (page) => {
   await page.waitForTimeout(6000);
 });
 
-// Shot 4: the proof, only when a signature from the take is passed in.
-if (sig) {
-  await shot("shot-4-proof", async (page) => {
-    await page.goto(`https://solscan.io/tx/${sig}`, { waitUntil: "domcontentloaded" });
+// Shot 4: the proof. The refusal's memo on chain, then the fill that followed it.
+// Only runs when the signatures from the take are passed in.
+// explorer.solana.com, not Solscan. Solscan sits behind a Cloudflare bot check that shows
+// "Verify you are human" to an automated browser, and defeating that is not on the table. The
+// official explorer serves the same transaction, renders the memo as readable text, and is the
+// explorer a judge is least likely to argue with.
+async function explorer(name, sig, findText) {
+  await shot(name, async (page) => {
+    await page.goto(`https://explorer.solana.com/tx/${sig}`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(7000);
-    for (let i = 0; i < 6; i++) { await page.mouse.wheel(0, 150); await page.waitForTimeout(250); }
-    await page.waitForTimeout(4000);
+    if (findText) {
+      const target = page.getByText(findText, { exact: false }).first();
+      await target.scrollIntoViewIfNeeded().catch(() => {});
+      await page.waitForTimeout(1200);
+    }
+    await page.waitForTimeout(5000);
   });
 }
+if (refusalSig) await explorer("shot-4a-refusal", refusalSig, "redline:refused");
+if (fillSig) await explorer("shot-4b-fill", fillSig, "USDC");
 
 // Shot 6: the page, held still. No end-card.
 await shot("shot-6-hold", async (page) => {
