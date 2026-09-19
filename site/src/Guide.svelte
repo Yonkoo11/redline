@@ -261,7 +261,15 @@
   .nots li + li{margin-top:var(--s3)}
   .nots b{color:var(--paper)}
 
-  a{color:inherit}
+  /* This route had two links and no focus ring at all, so a keyboard user had nothing to follow.
+     Hover lives inside @media (hover:hover) so a touch device does not get a stuck state. */
+  a{color:inherit;border-bottom:var(--hairline) solid var(--rule);text-decoration:none;
+    transition:border-color var(--t-fast) var(--ease),color var(--t-fast) var(--ease)}
+  @media(hover:hover){a:hover{color:var(--ink);border-color:var(--red)}}
+  a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(224,58,47,.35);border-radius:var(--r-sm)}
+  .band.dark a{border-bottom-color:rgba(244,243,239,.3)}
+  @media(hover:hover){.band.dark a:hover{color:var(--paper);border-color:var(--red)}}
+  .learn-more:focus-visible,button:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(224,58,47,.35)}
 
   @media (max-width:760px){
     .entry{grid-template-columns:1fr;gap:var(--s3)}

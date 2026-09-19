@@ -23,12 +23,22 @@
   const refusals = $derived(tape.filter((r) => !r.allowed));
   const lastRefusal = $derived(refusals[0] ?? null);
   const cap = $derived(equity === null ? null : equity * 0.1);
+  // The needle's position is real: it comes from the refusal on the tape measured against the
+  // cap in force when that order was judged. Only the MOMENT is choreographed. On a fast
+  // connection the balance lands in under half a second, and a sweep nobody sees is a sweep that
+  // may as well not exist, so the needle is held at rest until the page has finished arriving.
+  let settled = $state(false);
   const needle = $derived.by(() => {
-    if (equity === null || !lastRefusal) return REST;
+    if (!settled || equity === null || !lastRefusal) return REST;
     const ratio = (lastRefusal.intent?.notional_usd ?? 0) / (lastRefusal.equity_usd * 0.1 || 1);
     return Math.max(REST, Math.min(HARD, REST + (106 * ratio) / 9));
   });
 
+
+  if (typeof window !== "undefined") {
+    const hold = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1180;
+    setTimeout(() => (settled = true), hold);
+  }
 
   fetch("tape.json")
     .then((r) => r.json())
@@ -54,28 +64,28 @@
 
 <Shell here="home">
 
-  <div class="state">
+  <div class="state" data-reveal style="--rv-delay:130ms; --rv-dur:520ms">
     <span class="dot" aria-hidden="true"></span>
     <span><b>Holding.</b> {tape.length} orders judged, {refusals.length} refused, and every refusal is on chain.</span>
   </div>
 
   <section class="first">
     <div>
-      <h1>Kill switch for <em>claw traders</em>.</h1>
-      <p class="sub">
+      <h1 data-reveal style="--rv-delay:250ms; --rv-dur:520ms">Kill switch for <em>claw traders</em>.</h1>
+      <p class="sub" data-reveal style="--rv-delay:430ms; --rv-dur:560ms">
         An agent may trade as hard as it likes, right up to the line. It cannot cross it. Redline sits
         between the model and the wallet: every order passes the policy its operator signed, or it is
         refused and the refusal is written to Solana.
       </p>
-      <p class="claim">
+      <p class="claim" data-reveal style="--rv-delay:580ms; --rv-dur:560ms">
         <b>111 of the 200 newest tokens on ClawPump describe a trading agent.</b>
         The platform gives them a daily model-spend budget and an address whitelist. No per-order cap.
         No daily loss limit. No drawdown halt.
-        <cite>Measured from clawpump.tech, 18 September 2026</cite>
+        <cite>Measured from clawpump.tech, 18 September 2026</cite>
       </p>
     </div>
 
-    <div class="housing">
+    <div class="housing" data-reveal style="--rv-delay:300ms; --rv-dur:720ms">
       <svg class="dial" viewBox="0 0 520 300" role="img" aria-label="The agent's live equity against the cap the policy derives from it">
         <defs>
           <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
@@ -91,7 +101,7 @@
           <line x1="260" y1="50" x2="260" y2="80" />
         </g>
         <path d="M 372 96 A 220 220 0 0 1 480 270" fill="none" stroke="#E03A2F" stroke-width="16" />
-        <g class="needle" transform="rotate({needle} 260 270)">
+        <g class="needle" class:live={equity !== null} style="--deg:{needle}deg">
           <path d="M252 258 L268 258 L263 72 L257 72 Z" fill="#131417" />
           <circle cx="260" cy="270" r="17" fill="#131417" />
           <circle cx="260" cy="270" r="5" fill="#E4E1D9" />
@@ -237,7 +247,12 @@
   .claim b{color:var(--ink);font-weight:600}
   .claim cite{display:block;margin-top:var(--s2);font-style:normal;font-size:13px;color:var(--ink-3)}
 
-  .housing{position:relative;background:var(--paper-2);border-radius:var(--r-lg);padding:var(--s8) var(--s6) var(--s6);
+  /* The card answers to its own width, never the page's. Its insides used to re-layout because
+     the VIEWPORT crossed 1060px, which is how a three-column proof row ended up squeezed inside a
+     568px card on a wide screen. --cu is 1px at the reference width, so a descendant can be sized
+     in card units and mean it. */
+  .housing{container-type:inline-size; --cu:calc(100cqw / 568);
+           position:relative;background:var(--paper-2);border-radius:var(--r-lg);padding:var(--s8) var(--s6) var(--s6);
     box-shadow:var(--e-3), inset 0 1px 0 rgba(255,255,255,.7)}
   .housing::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;
     background:linear-gradient(160deg,rgba(255,255,255,.9),rgba(19,20,23,.16));
@@ -245,8 +260,17 @@
   .dial{display:block;width:100%;height:auto}
   .needle{transition:transform 900ms var(--ease)}
 
+  /* A gradient hairline that catches light at the top edge and fades by the base, the way a
+     pressed metal bezel does. It accompanies the elevation below it; it never replaces it. */
+  .housing::before{content:"";position:absolute;inset:0;border-radius:inherit;
+    padding:var(--hairline);pointer-events:none;
+    background:linear-gradient(168deg, rgba(255,255,255,.9) 0%, rgba(19,20,23,.16) 46%, rgba(19,20,23,.06) 100%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude}
+
   .readout{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s6);margin-top:var(--s6);padding-top:var(--s4);border-top:1px solid var(--rule)}
-  @media(min-width:560px){.readout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s4)}}
+  @container (min-width:400px){.readout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s4)}}
   .readout .val{font:600 clamp(24px,5vw,28px)/1.1 "IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;margin-top:6px;overflow-wrap:anywhere}
   .readout .val.red{color:var(--red)}
   .readout .note{font-size:13px;line-height:1.45;color:var(--ink-3);margin-top:5px}
@@ -256,8 +280,11 @@
     background:linear-gradient(90deg,rgba(224,58,47,.075),transparent 62%);box-shadow:inset 3px 0 0 var(--red), var(--e-1)}
   .proof>*{min-width:0}
   .proof .receipt{justify-self:start}
-  @media(min-width:560px){.proof{grid-template-columns:auto minmax(0,1fr);gap:var(--s2) var(--s4)}.proof .receipt{grid-column:2}}
-  @media(min-width:1060px){.proof{grid-template-columns:auto minmax(0,1fr) auto}.proof .receipt{grid-column:3;align-self:center;justify-self:end}}
+  @container (min-width:400px){.proof{grid-template-columns:auto minmax(0,1fr);gap:var(--s2) var(--s4)}.proof .receipt{grid-column:2}}
+  /* Three columns only when the CARD is wide enough to hold them, measured rather than guessed:
+     the verdict chip and the receipt link need ~250cu between them before the reason stops wrapping. */
+  @container (min-width:640px){.proof{grid-template-columns:auto minmax(0,1fr) auto}
+    .proof .receipt{grid-column:3;align-self:center;justify-self:end}}
   .proof .what{font-size:15px}
   .proof .why{font-size:14px;line-height:1.45;color:var(--ink-2);margin-top:4px}
 
@@ -315,6 +342,18 @@
   .install{margin:var(--s16) 0 var(--s24);padding:var(--s8);background:var(--ink);color:var(--paper);border-radius:var(--r-lg);box-shadow:var(--e-3)}
   .install h3{font-weight:800;font-size:clamp(22px,2.6vw,30px);line-height:1.05;letter-spacing:-.01em;margin-bottom:var(--s2)}
   .install p{margin:0 0 var(--s6);color:rgba(244,243,239,.62);font-size:14px;max-width:54ch}
+  /* ── The sweep ──────────────────────────────────────────────────────────────────────────
+     The needle is the one thing on this page that moves, and it moves once. It rests until the
+     balance comes back from Solana, then travels to the position that balance implies. Nothing
+     is animated for the sake of it: the motion IS the reading arriving.
+
+     transform-box:view-box makes transform-origin resolve in the viewBox's own coordinates,
+     which is what lets a CSS rotation replace the SVG rotate() attribute. Using the attribute
+     and a CSS transform together does not work; they fight, and the needle vanishes. */
+  .needle{transform-box:view-box; transform-origin:260px 270px;
+          transform:rotate(var(--deg, 0deg));
+          transition:transform var(--sweep-dur) var(--sweep-ease)}
+
   .install .then{margin:var(--s6) 0 0;line-height:1.75;max-width:62ch}
   .inlinecmd{display:inline-block;padding:1px 6px;border-radius:var(--r-sm);
              background:rgba(244,243,239,.10);font:500 13px/1.5 "IBM Plex Mono",monospace;
