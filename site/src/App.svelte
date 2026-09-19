@@ -28,6 +28,33 @@
     return Math.max(REST, Math.min(HARD, REST + (106 * ratio) / 9));
   });
 
+  // The tape carries more than orders. An operator action (declaring an outflow, clearing a halt)
+  // and an internal error have no order attached, and reading through a missing one used to throw
+  // and take the whole list with it.
+  const isOperator = (r) => String(r.tool ?? "").startsWith("operator:");
+  const KINDS = { perp: "Perpetual", swap: "Swap", transfer: "Transfer",
+                  withdraw: "Withdrawal", spend: "Payment" };
+
+  function verdictOf(r) {
+    if (isOperator(r)) return "Operator";
+    if (r.would_refuse) return "Watched";
+    return r.allowed ? "Allowed" : "Refused";
+  }
+
+  function what(r) {
+    if (isOperator(r)) {
+      return r.rule === "day_reset" ? "Day rebaselined"
+           : r.rule === "halt_clear" ? "Halt cleared"
+           : "Operator action";
+    }
+    const i = r.intent;
+    if (!i) return r.rule === "internal_error" ? "Redline could not decide" : "Order";
+    const parts = [KINDS[i.kind] ?? i.kind ?? "Order"];
+    if (i.market) parts.push(i.market);
+    if (i.notional_usd) parts.push(`${money(i.notional_usd)} notional`);
+    return parts.join(", ");
+  }
+
   const money = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const when = (ts) => new Date(ts * 1000).toISOString().replace("T", " ").slice(0, 16) + " UTC";
   const short = (s) => s.slice(0, 8) + "…" + s.slice(-5);
@@ -137,15 +164,15 @@
   </div>
 
   {#each tape as r}
-    <div class="rec" class:refused={!r.allowed} class:watched={r.would_refuse}>
-      <span class="verdict" class:refused={!r.allowed} class:allowed={r.allowed && !r.would_refuse}
-            class:watched={r.would_refuse}>
-        {r.would_refuse ? "Watched" : r.allowed ? "Allowed" : "Refused"}
+    <div class="rec" class:refused={!r.allowed} class:watched={r.would_refuse}
+         class:operator={isOperator(r)}>
+      <span class="verdict" class:refused={!r.allowed && !isOperator(r)}
+            class:allowed={r.allowed && !r.would_refuse && !isOperator(r)}
+            class:watched={r.would_refuse} class:operator={isOperator(r)}>
+        {verdictOf(r)}
       </span>
       <div>
-        <div class="what">
-          {r.intent.kind === "perp" ? "Perpetual" : "Swap"}{#if r.intent.market}, <b>{r.intent.market}</b>{/if}{#if r.intent.notional_usd}, <span class="nb">{money(r.intent.notional_usd)} notional</span>{/if}
-        </div>
+        <div class="what">{what(r)}</div>
         <div class="why">{r.reason}{#if r.would_refuse}. Watching only, so the order went through{/if}</div>
         <div class="meta">
           <span>{when(r.ts)}</span>
@@ -297,6 +324,10 @@
                border-left:3px solid var(--ink-3)}
   .verdict.watched{color:var(--ink-2)}
   .verdict.watched::before{background:var(--ink-3)}
+  /* An operator action is not a verdict on an order, so it does not wear a verdict's colour. */
+  .rec.operator{background:none;border-left:3px solid var(--rule)}
+  .verdict.operator{color:var(--ink-3)}
+  .verdict.operator::before{background:var(--rule)}
 
   .sig{margin-top:var(--s6);padding:var(--s5);border-radius:var(--r-md);
        background:var(--paper-2);box-shadow:var(--e-1)}
