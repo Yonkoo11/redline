@@ -29,11 +29,43 @@ def stamp(seconds: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
+MAX_SECONDS = 4.6        # longer than this and a caption sits on screen past its welcome
+MAX_WORDS = 11
+
+
 def transcribe(audio: Path, out_dir: Path) -> list[dict]:
+    """Word-level timings, regrouped into readable lines.
+
+    Whisper's own segments are cut wherever it felt like breathing. On this narration that gave a
+    caption reading "...through the real" followed by one starting "Hermes hook, in front of" --
+    a sentence torn in half across two cards -- and two cards that sat on screen for eight
+    seconds. Regrouping the words fixes both: a line ends at a sentence end, or at a comma when
+    it has run long enough, and never runs past MAX_SECONDS.
+    """
     subprocess.run(["whisper", str(audio), "--model", "base", "--language", "en",
-                    "--output_format", "json", "--output_dir", str(out_dir)],
-                   check=True, capture_output=True, text=True)
-    return json.loads((out_dir / (audio.stem + ".json")).read_text())["segments"]
+                    "--word_timestamps", "True", "--output_format", "json",
+                    "--output_dir", str(out_dir)], check=True, capture_output=True, text=True)
+    data = json.loads((out_dir / (audio.stem + ".json")).read_text())
+
+    words = [w for seg in data["segments"] for w in seg.get("words", [])]
+    if not words:
+        return data["segments"]          # no word timings: fall back to whisper's own split
+
+    lines, cur = [], []
+    for w in words:
+        cur.append(w)
+        text = "".join(x["word"] for x in cur).strip()
+        span = cur[-1]["end"] - cur[0]["start"]
+        ends_sentence = text.endswith((".", "!", "?"))
+        long_enough = span >= 2.2 or len(cur) >= 7
+        if ends_sentence or (text.endswith(",") and long_enough) \
+                or span >= MAX_SECONDS or len(cur) >= MAX_WORDS:
+            lines.append({"start": cur[0]["start"], "end": cur[-1]["end"], "text": text})
+            cur = []
+    if cur:
+        lines.append({"start": cur[0]["start"], "end": cur[-1]["end"],
+                      "text": "".join(x["word"] for x in cur).strip()})
+    return lines
 
 
 # Whisper writes names the way it hears them. Correcting the spelling of a word that WAS said is
@@ -44,7 +76,7 @@ NAMES = {
     "Claw pump": "ClawPump", "Clawpomp": "ClawPump",
     "Solana Explorer": "Solana explorer", "Salon": "Solana",
     "Hermes pre-tool call": "Hermes pre-tool-call",
-    "main net": "mainnet", "Main net": "mainnet", "test net": "testnet",
+    "main net": "mainnet", "Main net": "mainnet", "Mainnet": "mainnet", "test net": "testnet",
     "Test net": "testnet", "mainnet.": "mainnet.",
 }
 

@@ -128,10 +128,13 @@ def main() -> int:
     bad = []
     for seg in ids:
         heard = transcribe(DEMO / f"vo-{seg}.m4a")
-        score = overlap(heard, spec["lines"][seg])
-        print(f"    vo-{seg}: {'ok   ' if score >= 0.6 else 'WRONG'} {score:.0%} — "
-              f"{heard[:56].replace(chr(10), ' ')}")
-        if score < 0.6:
+        want = spec["lines"][seg]
+        score, finished = overlap(heard, want), tail_said(heard, want)
+        why = "" if finished else "  <-- stops short of the end of the line"
+        ok = score >= 0.75 and finished
+        print(f"    vo-{seg}: {'ok   ' if ok else 'WRONG'} {score:.0%} — "
+              f"{heard[:52].replace(chr(10), ' ')}{why}")
+        if not ok:
             bad.append(seg)
     if bad:
         for f in made:
@@ -165,12 +168,38 @@ def transcribe(path: Path) -> str:
         return (Path(tmp) / (path.stem + ".txt")).read_text().strip()
 
 
+NUMBERS = {"ten": "10", "sixteen": "16", "nine": "9", "percent": "%", "seventy": "70",
+           "seventy nine": "79", "dollars": "$"}
+
+
+def words_of(text: str) -> list:
+    text = text.lower()
+    for word, digit in NUMBERS.items():
+        text = text.replace(word, digit)
+    return re.sub(r"[^a-z0-9 ]", " ", text).split()
+
+
 def overlap(heard: str, wanted: str) -> float:
-    """Share of the intended words that were actually said. Whisper spells names its own way, so
-    this is deliberately a word-overlap score and not an exact match."""
-    norm = lambda t: set(re.sub(r"[^a-z0-9 ]", " ", t.lower()).split())
-    want = norm(wanted)
-    return len(want & norm(heard)) / len(want) if want else 0.0
+    """Share of the intended words that were actually said.
+
+    Deliberately a word-overlap score, not an exact match: Whisper writes names and numbers its
+    own way. Numbers are normalised first so 'ten percent' and '10%' do not read as a miss.
+    """
+    want = set(words_of(wanted))
+    return len(want & set(words_of(heard))) / len(want) if want else 0.0
+
+
+def tail_said(heard: str, wanted: str, n: int = 4) -> bool:
+    """Did it reach the END of the line?
+
+    The model truncates. On one run it stopped after 'from a policy I sign' and dropped the whole
+    closing sentence, and the overlap score still read 66% because everything before it was
+    correct. A missing tail is invisible to a percentage, so the last few words are checked on
+    their own.
+    """
+    want = [w for w in words_of(wanted) if len(w) > 2][-n:]
+    heard_words = set(words_of(heard))
+    return sum(1 for w in want if w in heard_words) >= max(1, len(want) - 1)
 
 
 if __name__ == "__main__":

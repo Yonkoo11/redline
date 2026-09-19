@@ -43,8 +43,12 @@ const settle = (page) => page.waitForTimeout(1500);
 await shot("shot-1-problem", async (page) => {
   await page.goto(SITE, { waitUntil: "networkidle" });
   await settle(page);
-  for (let i = 0; i < 9; i++) { await page.mouse.wheel(0, 100); await page.waitForTimeout(220); }
-  await page.waitForTimeout(15000);
+  // A short move only. This used to scroll 900px, which carried the measured ClawPump fact off
+  // the top of the frame at about six seconds -- while the narration was still reading it out.
+  // For nearly half this shot a viewer heard "the platform gives it a spend budget and a list of
+  // addresses. It does not give it a cap per order" while looking at a list of swaps.
+  for (let i = 0; i < 7; i++) { await page.mouse.wheel(0, 32); await page.waitForTimeout(260); }
+  await page.waitForTimeout(16000);
 });
 
 // Shot 2: the policy page, NOT the landing page again. This shot used to be a second pass over
