@@ -272,3 +272,81 @@ class OperatorSignature(unittest.TestCase):
         d["allowed_tokens"] = ["SOL", "USDC", "BONK"]          # one extra token
         self.path.write_text(json.dumps(d))
         self.assertFalse(Policy.load(self.path, self.pub).verified)
+
+
+class ShadowMode(unittest.TestCase):
+    """A new policy should be watched before it is trusted. Shadow judges without blocking."""
+
+    def setUp(self):
+        import tempfile, pathlib, json, os
+        from redline.sign import keygen
+        from redline.signing import sign_policy
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+        redline.HOME = self.tmp
+        redline.POLICY_PATH = self.tmp / "policy.json"
+        redline.STATE_PATH = self.tmp / "state.json"
+        self.key = self.tmp / "k.json"
+        pub = keygen(self.key)
+        redline.POLICY_PATH.write_text(json.dumps({
+            "max_trade_pct_equity": 10, "max_daily_loss_pct": 5, "max_drawdown_pct": 15,
+            "max_leverage": 2, "equity_floor_usd": 5, "allowed_markets": ["SOL"],
+            "allowed_tokens": ["SOL", "USDC"], "allowed_destinations": [],
+            "refusal_cooldown_count": 5, "refusal_cooldown_minutes": 30}))
+        sign_policy(redline.POLICY_PATH, self.key)
+        self._old_pub = os.environ.get("REDLINE_OPERATOR_PUBKEY")
+        self._old_mode = os.environ.get("REDLINE_MODE")
+        os.environ["REDLINE_OPERATOR_PUBKEY"] = pub
+        self.tape = []
+        redline.configure(equity_reader=lambda: 100.0, price_reader=px, tape=self.tape.append)
+
+    def tearDown(self):
+        import os
+        for k, v in (("REDLINE_OPERATOR_PUBKEY", self._old_pub), ("REDLINE_MODE", self._old_mode)):
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+
+    def _over_cap(self):
+        return redline.pre_tool_call(
+            "mcp_clawpump_perps_order_execute", {"market": "SOL", "size": 0.5}, "t")
+
+    def test_enforce_is_the_default(self):
+        """A guardrail that is off by accident is worse than none."""
+        out = self._over_cap()
+        self.assertEqual(out["action"], "block")
+        self.assertEqual(self.tape[-1]["mode"], "enforce")
+
+    def test_shadow_lets_the_order_through(self):
+        import os
+        os.environ["REDLINE_MODE"] = "shadow"
+        self.assertIsNone(self._over_cap())
+
+    def test_shadow_still_records_what_it_would_have_refused(self):
+        import os
+        os.environ["REDLINE_MODE"] = "shadow"
+        self._over_cap()
+        rec = self.tape[-1]
+        self.assertTrue(rec["would_refuse"])
+        self.assertEqual(rec["rule"], "trade_cap")
+        self.assertEqual(rec["mode"], "shadow")
+
+    def test_shadow_does_not_burn_the_refusal_cooldown(self):
+        """Watching must not trip a limit that only enforcing should trip."""
+        import os, json
+        os.environ["REDLINE_MODE"] = "shadow"
+        for _ in range(8):
+            self._over_cap()
+        state = json.loads(redline.STATE_PATH.read_text())
+        self.assertEqual(state["refusals"], [])
+
+    def test_env_overrides_a_signed_shadow_policy_back_to_enforce(self):
+        """An operator must always be able to turn enforcement on without re-signing."""
+        import os, json
+        d = json.loads(redline.POLICY_PATH.read_text())
+        d["mode"] = "shadow"
+        redline.POLICY_PATH.write_text(json.dumps(d))
+        from redline.signing import sign_policy
+        sign_policy(redline.POLICY_PATH, self.key)
+        self.assertIsNone(self._over_cap())              # signed shadow: allowed
+        os.environ["REDLINE_MODE"] = "enforce"
+        self.assertEqual(self._over_cap()["action"], "block")

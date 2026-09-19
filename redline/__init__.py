@@ -13,6 +13,19 @@ STATE_PATH = HOME / "state.json"
 # can rewrite. Absent means no policy can verify, which means every governed call is refused.
 OPERATOR_PUBKEY_ENV = "REDLINE_OPERATOR_PUBKEY"
 
+# Shadow mode: judge every call and write the verdict, but block nothing. It is how a new policy
+# should be introduced — watch what WOULD have been refused for a session, then enforce the same
+# limits. Set REDLINE_MODE=shadow, or put "mode": "shadow" in the policy so the choice is signed
+# too. Enforcing is the default, because a guardrail that is off by accident is worse than none.
+MODE_ENV = "REDLINE_MODE"
+
+
+def _shadow(policy) -> bool:
+    env = os.environ.get(MODE_ENV, "").strip().lower()
+    if env in ("shadow", "enforce"):
+        return env == "shadow"
+    return getattr(policy, "mode", "enforce") == "shadow"
+
 _equity_reader = None   # callable -> Optional[float]; installed by runtime.py
 _equity_source = "unset"  # "live" once runtime.wire() runs; anything else is a test fixture
 _price_reader = lambda sym: None
@@ -55,7 +68,13 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str = "", **kwargs):
               "equity_usd": round(equity, 2) if equity is not None else None,
               "equity_source": _equity_source,
               "policy_verified": policy.verified}
-    if not verdict.allowed:
+    shadow = _shadow(policy)
+    record["mode"] = "shadow" if shadow else "enforce"
+    if shadow and not verdict.allowed:
+        # What the operator is watching for: the order that would have been stopped.
+        record["would_refuse"] = True
+        record["allowed"] = True
+    if not verdict.allowed and not shadow:
         record_refusal(state, now)
     state.save(STATE_PATH)
     if _tape:
@@ -63,7 +82,7 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str = "", **kwargs):
             _tape(record)
         except Exception:
             pass   # the tape must never block the refusal itself
-    if verdict.allowed:
+    if verdict.allowed or shadow:
         return None
     return {"action": "block", "message": f"REDLINE refused ({verdict.rule}): {verdict.reason}"}
 

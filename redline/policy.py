@@ -40,6 +40,9 @@ class Policy:
     allowed_destinations: list = field(default_factory=list)
     refusal_cooldown_count: int = 5
     refusal_cooldown_minutes: int = 30
+    # "enforce" blocks a failing order. "shadow" judges and records it but lets it through, so a
+    # new policy can be watched before it is trusted. Signed along with the limits.
+    mode: str = "enforce"
 
     # Not a limit: whether these limits were signed by the pinned operator key.
     # Set only by load(). An unverified policy refuses everything.

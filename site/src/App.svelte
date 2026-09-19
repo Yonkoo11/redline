@@ -143,13 +143,16 @@
   </div>
 
   {#each tape as r}
-    <div class="rec" class:refused={!r.allowed}>
-      <span class="verdict" class:refused={!r.allowed} class:allowed={r.allowed}>{r.allowed ? "Allowed" : "Refused"}</span>
+    <div class="rec" class:refused={!r.allowed} class:watched={r.would_refuse}>
+      <span class="verdict" class:refused={!r.allowed} class:allowed={r.allowed && !r.would_refuse}
+            class:watched={r.would_refuse}>
+        {r.would_refuse ? "Watched" : r.allowed ? "Allowed" : "Refused"}
+      </span>
       <div>
         <div class="what">
           {r.intent.kind === "perp" ? "Perpetual" : "Swap"}{#if r.intent.market}, <b>{r.intent.market}</b>{/if}{#if r.intent.notional_usd}, <span class="nb">{money(r.intent.notional_usd)} notional</span>{/if}
         </div>
-        <div class="why">{r.reason}</div>
+        <div class="why">{r.reason}{#if r.would_refuse}. Watching only, so the order went through{/if}</div>
         <div class="meta">
           <span>{when(r.ts)}</span>
           {#if r.equity_usd}<span>equity {money(r.equity_usd)}, read {r.equity_source}</span>{/if}
@@ -159,7 +162,7 @@
         {#if r.memo_sig}
           <a class="receipt" href={`https://solscan.io/tx/${r.memo_sig}`}>{short(r.memo_sig)} ↗</a>
         {:else}
-          <span class="lbl">no receipt — only refusals are written</span>
+          {#if !r.would_refuse}<span class="lbl">no receipt, only refusals are written</span>{/if}
         {/if}
       </div>
     </div>
@@ -295,6 +298,11 @@
   .lim{display:flex;align-items:baseline;gap:var(--s3);padding:var(--s3) 0;border-bottom:1px solid var(--rule-soft)}
   .lim .n{flex:1;font-size:14px;color:var(--ink-2)}
   .lim .v{font:600 15px/1 "IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+
+  .rec.watched{background:linear-gradient(90deg, rgba(19,20,23,.045), transparent 60%);
+               border-left:3px solid var(--ink-3)}
+  .verdict.watched{color:var(--ink-2)}
+  .verdict.watched::before{background:var(--ink-3)}
 
   .sig{margin-top:var(--s6);padding:var(--s5);border-radius:var(--r-md);
        background:var(--paper-2);box-shadow:var(--e-1)}
