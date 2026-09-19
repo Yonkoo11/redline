@@ -1,19 +1,18 @@
-# Social images
-
-Built from the same world as the site and the mark: paper ground with the ruled instrument
-texture, Barlow Condensed wordmark, IBM Plex Mono for everything else, red #E03A2F as the only
-colour. Source: `header.html`, rendered natively at 1500x500 and again at 2x. Nothing upscaled.
+# Social assets
 
 | File | Size | Use |
 |---|---|---|
-| `x-header-1500x500.png` | 1500x500 | X header, the size X asks for |
-| `x-header-3000x1000.png` | 3000x1000 | the same at 2x, for retina crispness; upload this one if X accepts it |
-| `x-avatar-400.png` | 400x400 | X profile picture, from the mark |
-| `x-header-GUIDES.png` | 1500x500 | the same header with the crop guides drawn on, for checking only — never upload |
+| `x-header-3000x1000.png` | 3000 x 1000 | upload this one as the X header (X downscales to 1500 wide, stays sharp on retina) |
+| `x-header-1500x500.png` | 1500 x 500 | the 1x reference render |
+| `x-avatar-400.png` | 400 x 400 | profile picture |
+| `x-header-GUIDES.png` | 1500 x 500 | checking only, never upload |
+| `header.html` | - | the source; re-render with headless Chrome at `--window-size=1500,500` |
 
-**Why the layout is what it is.** X drops the profile picture over the bottom-left corner and crops
-the banner vertically on phones. The circle and rectangle in the guides file are those two zones
-measured, not assumed. The wordmark, the strap and the whole dial sit inside the mobile crop; the
-bottom-left corner is deliberately empty; the domain line starts at x=340 so the avatar never covers
-it. The needle and the full red band stay on canvas rather than bleeding off the right edge, because
-the needle meeting the band is the entire idea.
+## Safe areas, measured on the live @UseRedline profile (2026-09-19)
+
+- The profile picture covers roughly **x 50-390, y 316-500** of the banner and hangs below it.
+  It swallowed the strapline in the first version. All copy now sits above y=300.
+- Keep everything inside **x 150-1350** so a side crop on a narrow window cannot clip the
+  wordmark or the dial.
+- The X phone app enlarges the banner while the timeline is pulled down, which crops both
+  sides. That is a transient state, not the resting layout.
