@@ -177,3 +177,111 @@ Every interactive element gets hover **and** `:focus-visible`, hover inside `@me
 - [ ] The most recent refusal and its Solscan link are on screen at 1280×900 without scrolling.
 - [ ] Desktop 1280 and phone 390 screenshots taken, looked at, no overflow, no orphan, no dead flat band.
 - [ ] Not one word of copy, one colour or one URL differs from this brief.
+
+
+---
+
+## 9. The unit system (added 2026-09-19, revamp pass)
+
+One scale drives the hero's composition, so it keeps its proportions without a breakpoint.
+Lengths that belong to a CONTROL rather than to the composition (a border, a focus ring, a touch
+target) stay in px on purpose: a scaled focus ring is a worse focus ring.
+
+```css
+--artboard-w:1440; --artboard-h:860; --u-max:1.08px;
+--u: min(calc(100vw / var(--artboard-w)), var(--u-max));
+--hairline: max(1px, calc(1 * var(--u)));   /* a scaled 1px rounds to zero; this floors it */
+```
+
+**Named deviation from the reference method.** The reference derives `--u` from both viewport
+dimensions and forbids scrolling. Redline's page scrolls, because its evidence is a list that
+grows, so `--u` is driven by width alone. Binding it to height as well would shrink the type on a
+short window for no reason.
+
+### Nested unit
+
+`.housing` (the dial card) sets `container-type:inline-size` and `--cu: calc(100cqw / 568)`, so
+1 unit is 1px at the card's reference width. Its internal layout answers to `@container`, never to
+`@media`. Before this, the proof row went to three columns because the VIEWPORT passed 1060px,
+which squeezed a 568px card and wrapped the reason across two lines on a wide screen.
+
+Measured after the change: card 570px → 2 columns; card 712px → 3 columns; card 342px → 1 column.
+
+## 10. Type scale
+
+Was ad-hoc: `13px` decided at 26 separate elements, `14px` at 21, `15px` at 10.
+
+| token | value | role |
+|---|---|---|
+| `--t-display` | `clamp(40px, 9vw, 84px)` | the headline |
+| `--t-h2` | `clamp(26px, 3vw, 36px)` | section heads |
+| `--t-h3` | `clamp(22px, 2.6vw, 30px)` | block heads |
+| `--t-lede` | 16px | the opening paragraph |
+| `--t-body` | 15px | body |
+| `--t-meta` | 14px | row detail |
+| `--t-fine` | 13px | notes, commands |
+| `--t-label` | 12px | tracked-out uppercase labels |
+
+## 11. The sweep — the page's one moment of motion
+
+```css
+--sweep-dur:1400ms; --sweep-ease:cubic-bezier(.16,1,.3,1);
+.needle{transform-box:view-box; transform-origin:260px 270px;
+        transform:rotate(var(--deg,0deg));
+        transition:transform var(--sweep-dur) var(--sweep-ease)}
+```
+
+The needle rests at **-42°** and travels to the angle the real refusal implies, capped at **64°**,
+where the red band begins. The position is real: it is the refused order's notional measured
+against the cap that was in force when that order was judged.
+
+**Only the moment is choreographed.** The balance returns from Solana in under half a second on a
+warm connection, and a sweep nobody sees may as well not exist, so the needle is held until
+**1180ms**, after the reveal below has finished. Under reduced motion the hold is 0 and there is
+no transition.
+
+`transform-box:view-box` is what lets a CSS rotation replace the SVG `rotate()` attribute. Using
+both together does not work: they fight and the needle disappears. That happened once already.
+
+## 12. Reveal — the timing table
+
+Opacity only, `both`, easing `cubic-bezier(.33,0,.2,1)`. **Named deviation:** the reference
+specifies a linear ramp, which is defensible for a pure opacity fade, but this project's hard
+rules ban linear easing and across a 520ms fade the two are not tellable apart. The rule wins. Reveal lands on `var(--o)` and never on 1, so an element that is
+deliberately dimmed keeps its place in the opacity hierarchy instead of being forced opaque by
+its own entrance.
+
+| element | delay | duration |
+|---|---|---|
+| state line | 130ms | 520ms |
+| headline | 250ms | 520ms |
+| dial card | 300ms | 720ms |
+| lede | 430ms | 560ms |
+| field claim | 580ms | 560ms |
+| needle sweep begins | 1180ms | 1400ms |
+
+`main.js` adds `.is-ready` to `<html>` one frame after the document is ready, and `.is-revealed`
+to each element on its own `animationend`, so a later re-render cannot replay an entrance.
+
+**Reduced motion is a real branch, not a disabled one.** `.js [data-reveal]{opacity:var(--o,1)
+!important}` inside the query, because an entrance that never runs must not leave the page
+invisible. Verified by rendering both branches: headless Chrome reports `reduce` by default, which
+is how the branch got tested before anyone asked for it.
+
+## 13. Acceptance checklist
+
+- [ ] The tape and the policy render rows, not empty headings, for every record shape including
+      operator actions and internal errors.
+- [ ] `node --test site/src/lib/` passes: the record-to-words module survives the real tape plus
+      shapes that do not exist yet.
+- [ ] The needle rests until 1180ms, then sweeps once. It never teleports and never disappears.
+- [ ] With reduced motion on: no entrance, no sweep, every element at its own opacity, the page
+      fully readable.
+- [ ] Shrinking the window never re-arranges the dial card's insides; only how its rows stack
+      changes, and that is driven by the card's own width.
+- [ ] No horizontal overflow at 390, 760, 980, 1180 or 1440 on any of the four routes.
+- [ ] Every route has a visible focus ring on every interactive element.
+- [ ] `node ~/.claude/skills/ui-revamp/scripts/audit.js site/src` reports no violations.
+- [ ] Blur test at 7px on the first viewport: the headline reads first, the dial second.
+- [ ] No borrowed logo, no invented metric, no number on the page that is not read from a real
+      source or measured and dated.

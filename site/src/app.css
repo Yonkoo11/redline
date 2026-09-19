@@ -24,7 +24,11 @@
      One duration and one curve for the page's own moments, referenced everywhere. The sweep is
      slower than any control because it happens once and carries the product's whole claim. */
   --sweep-dur:1400ms; --sweep-ease:cubic-bezier(.16,1,.3,1);
-  --reveal-ease:linear;
+  /* The reference brief specifies a linear ramp for its load reveal, and for a pure opacity fade
+     that is a defensible choice. This project's own hard rules ban linear easing outright, and
+     across a 520ms opacity fade the two are not tellable apart, so the rule wins and the reveal
+     eases out. Named here because it is a deviation from the reference, not an oversight. */
+  --reveal-ease:cubic-bezier(.33,0,.2,1);
 
   --paper:#F4F3EF; --paper-2:#EDEBE5; --paper-3:#E5E2DA;
   --ink:#131417; --ink-2:#4A4C52; --ink-3:#8B8D93;
