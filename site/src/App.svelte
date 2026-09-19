@@ -60,7 +60,7 @@
 
   <div class="state">
     <span class="dot" aria-hidden="true"></span>
-    <span><b>Holding.</b> {tape.length} orders judged, {refusals.length} refused, and the refusal is on chain.</span>
+    <span><b>Holding.</b> {tape.length} orders judged, {refusals.length} refused, and every refusal is on chain.</span>
   </div>
 
   <section class="first">
