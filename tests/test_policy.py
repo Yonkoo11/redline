@@ -422,3 +422,90 @@ class DayReset(unittest.TestCase):
         rec = json.loads((self.tmp / "tape.jsonl").read_text().strip())
         self.assertEqual(rec["rule"], "day_reset")
         self.assertIn("outflow", rec["reason"])
+
+
+class EquityCountsEverything(unittest.TestCase):
+    """Value the reader cannot see is indistinguishable from value that was lost. A swap into a
+    token the old reader ignored reported a 9.4% daily loss, and a larger one latched the drawdown
+    halt at 76%, while the money sat in the wallet."""
+
+    def setUp(self):
+        from redline import equity
+        self.eq = equity
+        self._sol, self._hold, self._px = equity.sol_balance, equity.token_holdings, equity.prices_usd
+
+    def tearDown(self):
+        self.eq.sol_balance, self.eq.token_holdings, self.eq.prices_usd = self._sol, self._hold, self._px
+
+    def _wallet(self, sol, holdings, prices):
+        self.eq.sol_balance = lambda addr, rpc=None: sol
+        self.eq.token_holdings = lambda addr, rpc=None: holdings
+        self.eq.prices_usd = lambda mints: prices
+
+    def test_a_token_that_is_not_usdc_still_counts(self):
+        BONK = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"
+        self._wallet(0.1, {BONK: 1_000_000.0},
+                     {self.eq.SOL_MINT: 100.0, BONK: 0.00002})
+        self.assertAlmostEqual(self.eq.wallet_equity_usd("x"), 10.0 + 20.0, places=6)
+
+    def test_an_unpriceable_holding_fails_the_whole_reading(self):
+        """Skipping it would under-count, and under-counting reads as a loss that never happened."""
+        MYSTERY = "MysteryMint1111111111111111111111111111111"
+        self._wallet(0.1, {MYSTERY: 5.0}, {self.eq.SOL_MINT: 100.0})
+        with self.assertRaises(self.eq.Unpriceable):
+            self.eq.wallet_equity_usd("x")
+
+    def test_dust_does_not_fail_the_reading(self):
+        """Wallets collect abandoned accounts; a fraction of a cent must not stop trading."""
+        DUST = "DustMint111111111111111111111111111111111"
+        self._wallet(0.1, {DUST: 1e-12}, {self.eq.SOL_MINT: 100.0})
+        self.assertAlmostEqual(self.eq.wallet_equity_usd("x"), 10.0, places=6)
+
+    def test_no_sol_price_is_still_a_hard_failure(self):
+        self._wallet(0.1, {}, {})
+        with self.assertRaises(RuntimeError):
+            self.eq.wallet_equity_usd("x")
+
+
+class HaltClear(unittest.TestCase):
+    """A latched halt needs a supported way out, or operators learn to edit the state file."""
+
+    def setUp(self):
+        import tempfile, pathlib
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+        self.state_path = self.tmp / "state.json"
+
+    def _halted(self):
+        return State(halted=True, halt_reason="drawdown 20.0% >= 15.0%",
+                     high_water_usd=120.0, day_start_usd=100.0, day_key="2026-09-19")
+
+    def test_clearing_resets_the_high_water_mark_to_now(self):
+        """Leaving the old mark would re-halt on the very next call."""
+        import redline.halt as H
+        st = self._halted()
+        H._paths = lambda: (self.tmp, self.state_path)
+        H._equity_now = lambda: 96.0
+        st.save(self.state_path)
+        H.main(["halt", "clear"])
+        after = State.load(self.state_path)
+        self.assertFalse(after.halted)
+        self.assertEqual(after.high_water_usd, 96.0)
+
+    def test_clearing_is_written_to_the_tape(self):
+        import json, redline.halt as H
+        st = self._halted()
+        H._paths = lambda: (self.tmp, self.state_path)
+        H._equity_now = lambda: 96.0
+        st.save(self.state_path)
+        H.main(["halt", "clear"])
+        rec = json.loads((self.tmp / "tape.jsonl").read_text().strip())
+        self.assertEqual(rec["rule"], "halt_clear")
+
+    def test_unreadable_equity_will_not_clear_a_halt(self):
+        import redline.halt as H
+        st = self._halted()
+        H._paths = lambda: (self.tmp, self.state_path)
+        H._equity_now = lambda: None
+        st.save(self.state_path)
+        self.assertEqual(H.main(["halt", "clear"]), 1)
+        self.assertTrue(State.load(self.state_path).halted)

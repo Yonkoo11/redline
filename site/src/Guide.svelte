@@ -37,7 +37,7 @@
       says: "drawdown X% >= Y%",
       means: "Equity fell that far below the highest value ever recorded. This is a latch, not a threshold.",
       does: "Everything is halted and stays halted, including after a restart.",
-      do: "This is the limit that exists for the worst day. Look at what happened before you clear it. Clearing it is a deliberate act: delete the halt in the state file, or start a fresh state.",
+      do: "This is the limit that exists for the worst day, so read the log before you touch it. Clearing is a deliberate act with its own command, and it writes a record like everything else. It also resets the high-water mark to where you are now, because otherwise the next order re-halts against the old mark.",
     },
     {
       rule: "daily_loss",
@@ -135,14 +135,20 @@
       <dt>Are my limits the ones I signed?</dt>
       <dd><code class="cmd">python -m redline.sign check ~/.hermes/redline/policy.json</code></dd>
       <dt>What has it decided so far?</dt>
-      <dd><code class="cmd">tail -f ~/.hermes/redline/tape.jsonl</code>
-        <span>Or open the file on the <a href="../log/">log page</a>, which reads it in your browser.</span></dd>
+      <dd><code class="cmd">python -m redline.log --refused</code>
+        <span>Filters, tallies and raw records, all in the terminal. Or open the file on the
+        <a href="../log/">log page</a>, which reads it in your browser. The file on your machine is
+        the truth either way, and the site is only a nicer lens on it.</span></dd>
       <dt>Why is the day down, and was it a loss or a spend?</dt>
       <dd><code class="cmd">python -m redline.day</code>
         <span>If the fall was money you moved, <code>python -m redline.day reset</code> moves the
         day's starting point down to where you are now. It is written to your log like any other
         decision, it can only forgive a fall that already happened, and it never touches the
         drawdown high-water mark.</span></dd>
+      <dt>It halted on drawdown. Now what?</dt>
+      <dd><code class="cmd">python -m redline.halt</code>
+        <span>Shows why, and what clearing would do. <code>python -m redline.halt clear</code>
+        clears it and writes that decision to your log.</span></dd>
       <dt>Is the plugin actually loaded?</dt>
       <dd><code class="cmd">hermes plugins validate</code></dd>
     </dl>
@@ -155,6 +161,7 @@
       <li><b>It never holds a key to your wallet.</b> It reads a balance and judges a call.</li>
       <li><b>It cannot stop an operator who keeps the signing key where the agent can read it.</b> Signing raises the bar from editing a file to stealing a key. Keep the key elsewhere.</li>
       <li><b>It does not watch positions between calls.</b> It acts at the moment a tool is called, not continuously.</li>
+      <li><b>It counts every token in the wallet, and refuses if it cannot price one of them.</b> Skipping an unpriceable holding would under-count, and money the reader cannot see looks exactly like money that was lost. Phoenix collateral is still outside the reading.</li>
       <li><b>It cannot tell a spend from a loss.</b> The daily limit reads equity, so a fee you paid or a transfer you made counts against the day. That is why the rebaseline command exists, and why it writes a record when you use it.</li>
     </ul>
   </section>
