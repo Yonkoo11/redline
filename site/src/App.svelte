@@ -46,14 +46,48 @@
     .then((r) => r.json())
     .then((d) => { tape = [...d.rows].reverse(); policy = d.policy; });
 
+  // Equity is SOL plus every token the wallet holds, not SOL alone. Reading only the native
+  // balance under-reported this wallet by its whole USDC position, and got worse with every swap
+  // the agent made, because a swap turns SOL into exactly the thing that was not counted. The
+  // plugin has always counted both. This page did not, and this page is the number people read.
+  //
+  // The native balance still comes from a Solana RPC, so "read from Solana" stays true of it.
+  // Token balances do not: every public RPC tried blocks getTokenAccountsByOwner from a browser
+  // (publicnode "Request blocked", mainnet-beta "Access forbidden", drpc paid-plan only), so they
+  // come from Jupiter, which is already the price source. The caption under the number says so.
+  //
+  // If a held token cannot be read or cannot be priced, the reading fails and the page says
+  // unavailable. It does not fall back to SOL alone: a cap derived from a balance that is missing
+  // a position is not a cap, and a number that is quietly wrong is worse than no number.
+  const DUST = 1e-9;
+
   (async () => {
     try {
-      const [bal, px] = await Promise.all([
+      const [bal, held] = await Promise.all([
         fetch(RPC, { method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getBalance", params: [AGENT] }) }).then((r) => r.json()),
-        fetch(`https://lite-api.jup.ag/price/v3?ids=${SOL}`).then((r) => r.json()),
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getBalance", params: [AGENT] }),
+        }).then((r) => r.json()),
+        fetch(`https://lite-api.jup.ag/ultra/v1/balances/${AGENT}`).then((r) => {
+          if (!r.ok) throw new Error(`balances ${r.status}`);
+          return r.json();
+        }),
       ]);
-      equity = (bal.result.value / 1e9) * px[SOL].usdPrice;
+
+      const tokens = Object.entries(held)
+        .filter(([mint, v]) => mint !== "SOL" && Number(v.uiAmount) >= DUST)
+        .map(([mint, v]) => [mint, Number(v.uiAmount)]);
+
+      const ids = [SOL, ...tokens.map(([mint]) => mint)].join(",");
+      const px = await fetch(`https://lite-api.jup.ag/price/v3?ids=${ids}`).then((r) => r.json());
+      if (!px[SOL]?.usdPrice) throw new Error("no SOL price");
+
+      let total = (bal.result.value / 1e9) * px[SOL].usdPrice;
+      for (const [mint, amount] of tokens) {
+        const price = px[mint]?.usdPrice;
+        if (!price) throw new Error(`no price for ${mint}`);
+        total += amount * price;
+      }
+      equity = total;
     } catch { failed = true; }
   })();
 
@@ -117,7 +151,7 @@
           <div class="note">
             {failed
               ? "Solana RPC or the price feed did not answer. The tape below is unaffected."
-              : "FT5GaRv2…jSZirz, read from Solana in your browser"}
+              : "FT5GaRv2…jSZirz, SOL read from Solana and tokens from Jupiter, in your browser"}
           </div>
         </div>
         <div>
