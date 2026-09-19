@@ -63,6 +63,9 @@ SOCIAL_POSTS.md
 SECURITY.md
 pipeline-log.md
 PULSE.md
+DEMO-SCRIPT.md
+DEMO-FOOTGUNS.md
+.demo-rehearsal-state.json
 .deploy-state.json
 site/node_modules/
 site/dist/
@@ -80,3 +83,7 @@ ENTRY-POST.md
 probe/clawpump-tokens-2026-09-18.json
 proposals/
 COPY-PASTE.md
+
+# demo video working files
+demo/
+*.cast

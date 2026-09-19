@@ -2,7 +2,7 @@
 
 # Redline
 
-![refusal tests](https://img.shields.io/badge/refusal_tests-20%2F20_passing-3fb950)
+![policy tests](https://img.shields.io/badge/policy_tests-96%2F96_passing-3fb950)
 [![tests](https://github.com/Yonkoo11/redline/actions/workflows/tests.yml/badge.svg)](https://github.com/Yonkoo11/redline/actions/workflows/tests.yml)
 ![runtime](https://img.shields.io/badge/Hermes_runtime_dispatch-4%2F4_cases_pass-121212)
 ![tape](https://img.shields.io/badge/on--chain_refusal-mainnet_confirmed-121212)
@@ -10,7 +10,7 @@
 
 ### Kill switch for claw traders.
 
-**Redline is a Hermes plugin that holds a ClawPump trading agent under a policy its operator wrote. Every order the agent tries passes the policy or is refused, and a refusal is written to Solana as a memo carrying the record's hash. Today: 20 tests green, the real Hermes runtime dispatching through it, and a refusal decided from live on-chain equity and recorded on Solana mainnet.**
+**Redline is a Hermes plugin that holds a ClawPump trading agent under a policy its operator wrote. Every order the agent tries passes the policy or is refused, and a refusal is written to Solana as a memo carrying the record's hash. Today: 96 tests green, the real Hermes runtime dispatching through it, and a refusal decided from live on-chain equity and recorded on Solana mainnet.**
 
 **[ Live ↗ ](https://useredline.xyz/)** · **[ Verify it yourself ↗ ](#verify-it-yourself-in-60-seconds)** · **[ The receipt ↗ ](https://solscan.io/tx/2pFTPkGoK4y3yPkdMZ5EQd3FYnGjTNv2qwdsoBmkrzGKq2fbvQDq6eGVRQvU2Rx58WF2qfLku5sV7R5YMVZHQe29)** · **[ @useredline ↗ ](https://x.com/useredline)**
 
@@ -100,17 +100,18 @@ A plugin that sits between the model and the tools that move money. The loop:
 No key, no wallet, no chain access needed for the first two checks. Every line below was run before it was written here; the expected results are in the comments.
 
 ```bash
-git clone https://github.com/Yonkoo11/redline && cd redline
-python3 -m unittest discover -s tests -t .          # → Ran 20 tests ... OK
-python3 -c "from redline.policy import *; print(evaluate(Policy(), State(), Intent('perp', 12.0, market='SOL'), 100.0, 0).reason)"
+git clone https://github.com/Yonkoo11/redline   # stay in this directory: the clone IS the package
+python3 -m unittest discover -s redline/tests -t .  # → Ran 96 tests ... OK
+python3 -c "from redline.policy import *; print(evaluate(Policy(verified=True), State(), Intent('perp', 12.0, market='SOL'), 100.0, 0).reason)"
                                                     # → notional $12.00 > cap $10.00 (10.0% of equity)
 # with Hermes v2026.9.14+ installed and the plugin linked into ~/.hermes/plugins/redline:
-~/.hermes/hermes-agent/venv/bin/python tests/hermes_integration.py
+export REDLINE_OPERATOR_PUBKEY=AqRT7dJrWw4t5vcgDDh9NosgFZKSMYhywxCvHFnJTwjm
+~/.hermes/hermes-agent/venv/bin/python redline/tests/hermes_integration.py
                                                     # → PASS: over-cap refused | in-policy allowed | read-only untouched | rpc-down fails closed
 hermes plugins validate ./redline                   # → Validation passed.
 ```
 
-The first check proves the rulebook. The third proves the installed Hermes runtime routes tool calls through it and honours the block. Neither touches a real venue: equity is a fixture in both, and the mainnet gate below is not yet passed.
+Run them from the directory above the clone, not from inside it. The plugin directory is the Python package, which is what `hermes plugins install` lays down, so `redline` has to be importable by that name. The third command needs the operator public key because a policy that cannot be verified refuses everything, which is the behaviour, not a setup step you can skip. Run the third one twice inside half an hour and it refuses with `cooldown`: five refusals in thirty minutes stops the agent retrying, and that is the rule working.\n\nThe first check proves the rulebook. The third proves the installed Hermes runtime routes tool calls through it and honours the block. Neither touches a real venue: equity is a fixture in both. The mainnet gate is the section below, and it has passed.
 
 ## The headline result
 
@@ -211,8 +212,8 @@ the refusal cool-down, so observing cannot trip a limit that only enforcing shou
 
 | Capability | Status |
 |---|---|
-| **Policy engine** | Real. 38 unit tests, `tests/test_policy.py`, run in CI. |
-| **Stress tested against itself** | Real, 2026-09-19. 101 tests, including an adversarial suite (disguised tool names, NaN and negative and overflowing sizes, salami-sliced orders, boundary values) and a resilience suite (corrupt state, corrupt policy, unwritable home, a log that throws, a price source that dies, twelve parallel calls, a 400-call run). Five bypasses were found and closed, each one named in [INVARIANTS.md](INVARIANTS.md), including one the test suite had asserted as correct. |
+| **Policy engine** | Real. 48 unit tests, `tests/test_policy.py`, run in CI. |
+| **Stress tested against itself** | Real, 2026-09-19. 96 tests, including an adversarial suite (disguised tool names, NaN and negative and overflowing sizes, salami-sliced orders, boundary values) and a resilience suite (corrupt state, corrupt policy, unwritable home, a log that throws, a price source that dies, twelve parallel calls, a 400-call run). Five bypasses were found and closed, each one named in [INVARIANTS.md](INVARIANTS.md), including one the test suite had asserted as correct. |
 | **Installing it from scratch** | Real. Verified 2026-09-19 by installing from GitHub into an empty Hermes home: the scan passes, `hermes plugins validate` passes, `redline sign keygen` produces a key, a signed policy verifies, and changing one number in it makes the check fail. |
 | **Operator signatures** | Real. Ed25519 over the canonical policy; an altered policy refuses everything. `OperatorSignature` and `UnknownFields` in the suite. |
 | **Watching before enforcing** | Real. `ShadowMode` in the suite, and one watched order is on the public tape. |
@@ -226,7 +227,7 @@ the refusal cool-down, so observing cannot trip a limit that only enforcing shou
 | Phoenix perps | Not available to this account. `perps_account` returns no registered trader, and registration is a private beta the backend controls. The venue path today is spot swaps through Jupiter. |
 | Pair-trading strategy (SOL against ETH) | Not built. |
 | Referee mode for hosted ClawPump agents | Not claimed, anywhere in this repository. Hosted agents cannot load a plugin. |
-| Realised trading performance | Not claimed. No trade has been made. |
+| Realised trading performance | Not claimed. One swap of $0.80 has filled, fired by the gate to prove the allowed half reaches a venue. It was not a strategy's decision, and no profit or loss is claimed from it. |
 
 ## Tech stack
 
@@ -253,7 +254,7 @@ design/logo/      # the mark, wordmark, and the rounds that were rejected
 ## Run it locally
 
 ```bash
-python3 -m unittest discover -s tests -t .                       # the rulebook
+python3 -m unittest discover -s redline/tests -t .                # the rulebook
 ln -sfn "$PWD/redline" ~/.hermes/plugins/redline                  # link the plugin into Hermes (v2026.9.14+)
 hermes plugins validate ./redline && hermes plugins enable redline
 mkdir -p ~/.hermes/redline && echo '{"agent_wallet":"<your ClawPump agent wallet>"}' > ~/.hermes/redline/config.json
@@ -263,7 +264,7 @@ cd site && npm install && npm run dev                             # the tape pag
 ## Tests
 
 ```bash
-python3 -m unittest discover -s tests -t .   # → Ran 20 tests ... OK
+python3 -m unittest discover -s redline/tests -t .   # → Ran 96 tests ... OK
 ```
 
 They cover every rule in the policy table, the intent mapping for both ClawPump MCP prefixes, the block return shape, the tape record, and fail-closed behaviour when equity cannot be read. CI runs them on every push: `.github/workflows/tests.yml`.
