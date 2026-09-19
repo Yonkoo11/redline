@@ -69,7 +69,7 @@
       <h1>Kill switch for <em>claw traders</em>.</h1>
       <p class="sub">
         An agent may trade as hard as it likes, right up to the line. It cannot cross it. Redline sits
-        between the model and the wallet: every order passes the policy its operator signed, or it is
+        between the model and the wallet: every order passes the policy its operator set, or it is
         refused and the refusal is written to Solana.
       </p>
       <p class="claim">
@@ -116,7 +116,7 @@
         <div>
           <span class="lbl">Cap per order</span>
           <div class="val red">{cap === null ? "—" : money(cap)}</div>
-          <div class="note">10% of equity, from the signed policy</div>
+          <div class="note">10% of equity, from the operator's policy</div>
         </div>
       </div>
 
@@ -163,7 +163,7 @@
   {/each}
 
   <div class="section-head">
-    <h2>The policy</h2><span class="lbl">signed by the operator, enforced on every call</span>
+    <h2>The policy</h2><span class="lbl">set by the operator, enforced on every call</span>
   </div>
   {#if policy}
     <div class="policy">
