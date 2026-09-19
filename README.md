@@ -57,7 +57,8 @@ the file it produces on the right, and the commands to sign it underneath.*
 
 ```bash
 hermes plugins install Yonkoo11/redline && hermes plugins enable redline
-pip install -r requirements.txt            # cryptography, for the signature check
+pip install -r ~/.hermes/plugins/redline/requirements.txt   # cryptography, for the signature check
+export PATH="$HOME/.hermes/plugins/redline:$PATH"           # the operator commands ship with it
 
 redline sign keygen              # once ever; keep this file away from the agent
 # build your limits at https://useredline.xyz/policy/ and save them to ~/.hermes/redline/policy.json
@@ -208,6 +209,7 @@ the refusal cool-down, so observing cannot trip a limit that only enforcing shou
 | Capability | Status |
 |---|---|
 | **Policy engine** | Real. 38 unit tests, `tests/test_policy.py`, run in CI. |
+| **Installing it from scratch** | Real. Verified 2026-09-19 by installing from GitHub into an empty Hermes home: the scan passes, `hermes plugins validate` passes, `redline sign keygen` produces a key, a signed policy verifies, and changing one number in it makes the check fail. |
 | **Operator signatures** | Real. Ed25519 over the canonical policy; an altered policy refuses everything. `OperatorSignature` and `UnknownFields` in the suite. |
 | **Watching before enforcing** | Real. `ShadowMode` in the suite, and one watched order is on the public tape. |
 | **ClawPump MCP, live** | Real. Probed with a real key: 132 tools, schemas in `probe/`. `get_portfolio` and `swap_quote` return live data for the agent wallet. |
