@@ -67,13 +67,31 @@ def render_cast(cast: Path) -> Path:
     return mp4
 
 
-def fit(src: Path, target: float, out: Path) -> None:
+def blank_head(src: Path) -> float:
+    """How long the clip spends on an unrendered page before anything appears.
+
+    Playwright starts recording when the context opens, so every browser clip begins with the
+    browser sitting on a blank page while the site loads. Roughly a second each. Left in, the
+    video opens on a white screen, and two shots of the same site both start with that same white
+    screen, which is what they look like when you watch it: a repeated frame.
+    """
+    p = subprocess.run(["ffmpeg", "-i", str(src), "-vf", r"select=gt(scene\,0.02),showinfo",
+                        "-f", "null", "-"], capture_output=True, text=True)
+    times = [float(t) for t in re.findall(r"pts_time:([0-9.]+)", p.stderr)]
+    if not times:
+        return 0.0
+    return min(times[0] + 0.15, 3.0)   # never eat more than three seconds
+
+
+def fit(src: Path, target: float, out: Path, head: float = 0.0, crop: str = "") -> None:
     """Make src exactly `target` seconds: trim if long, hold the last frame if short."""
-    have = duration(src)
+    have = duration(src) - head
     pad = f",tpad=stop_mode=clone:stop_duration={target - have + 0.5:.3f}" if have < target else ""
-    run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-an", "-vf",
-         f"scale={W}:{H}:force_original_aspect_ratio=decrease,"
-         f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2:color=0x121212,fps={FPS}{pad}",
+    seek = ["-ss", f"{head:.3f}"] if head > 0.01 else []
+    chain = (f"{crop}," if crop else "") + (
+        f"scale={W}:{H}:force_original_aspect_ratio=decrease,"
+        f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2:color=0x121212,fps={FPS}{pad}")
+    run(["ffmpeg", "-y", "-loglevel", "error", *seek, "-i", str(src), "-an", "-vf", chain,
          "-t", f"{target:.3f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(out)])
 
 
@@ -90,6 +108,9 @@ def main() -> int:
         src = Path(shot["clip"])
         if not src.exists():
             raise SystemExit(f"missing clip: {src}")
+        # An explicit head wins: the automatic one only finds where the page stops being blank,
+        # which is not the same as where it has finished drawing itself.
+        head = 0.0 if src.suffix == ".cast" else float(shot.get("head", blank_head(src)))
         cast_len = None
         if src.suffix == ".cast":
             # In check mode the cast is not rendered, so read its own last event time instead of
@@ -104,17 +125,18 @@ def main() -> int:
             voice = None
         spoken = duration(voice) if voice else 0.0
         if shot.get("fixed"):
-            target = cast_len if check else duration(src)
+            target = cast_len if check else duration(src) - head
         else:
             target = max(spoken + shot.get("pad", 0.8), shot.get("min", 3.0))
         if shot.get("fixed") and spoken > target:
             print(f"  ! {shot['id']}: the voice runs {spoken - target:.1f}s longer than the take. "
                   f"Cut words, not the take.")
-        print(f"  {shot['id']:<16} clip {src.name:<22} voice {spoken:5.2f}s -> {target:5.2f}s"
+        lead = f"  (skipped {head:.1f}s of blank page)" if head > 0.05 else ""
+        print(f"  {shot['id']:<16} clip {src.name:<22} voice {spoken:5.2f}s -> {target:5.2f}s{lead}"
               + ("  (fixed: the take sets the length)" if shot.get("fixed") else ""))
         if not check:
             part = WORK / f"{i:02d}-{shot['id']}.mp4"
-            fit(src, target, part)
+            fit(src, target, part, head=head, crop=shot.get("crop", ""))
             parts.append(part)
             if voice:
                 # voice_at delays a take inside its shot, so the words track the picture. In the

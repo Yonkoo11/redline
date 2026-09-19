@@ -39,18 +39,19 @@ const settle = (page) => page.waitForTimeout(1500);
 // Every shot below is recorded with slack on the end. The voice take sets the real length and
 // the edit trims to it, rather than the voice being squeezed to fit a clip.
 //
-// Shot 1: the problem. A real scroll to the measured ClawPump fact, at reading speed.
-await shot("shot-1-problem", async (page) => {
-  await page.goto(SITE, { waitUntil: "networkidle" });
-  await settle(page);
-  for (let i = 0; i < 9; i++) { await page.mouse.wheel(0, 100); await page.waitForTimeout(220); }
-  await page.waitForTimeout(14000);
-});
-
-// Shot 2: the dial. Reload so the needle sweeps to the live reading on camera.
+// The opener. It holds on the dial for the whole opening narration, because that narration is
+// ABOUT the dial: the balance, the cap under it, the money being real. An earlier version eased
+// down into the tape halfway through and left the narration describing something no longer on
+// screen. The drift is small on purpose, a few hundred pixels over half a minute, enough that
+// the frame is not dead and not enough to lose the subject.
 await shot("shot-2-dial", async (page) => {
   await page.goto(SITE, { waitUntil: "networkidle" });
-  await page.waitForTimeout(18000);
+  await page.waitForTimeout(4000);           // the page settles and the needle sweeps
+  for (let i = 0; i < 30; i++) {
+    await page.mouse.wheel(0, 11);
+    await page.waitForTimeout(880);
+  }
+  await page.waitForTimeout(4000);
 });
 
 // Shot 4: the proof. The refusal's memo on chain, then the fill that followed it.

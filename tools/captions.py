@@ -44,13 +44,17 @@ NAMES = {
     "Claw pump": "ClawPump", "Clawpomp": "ClawPump",
     "Solana Explorer": "Solana explorer", "Salon": "Solana",
     "Hermes pre-tool call": "Hermes pre-tool-call",
+    "main net": "mainnet", "Main net": "mainnet", "test net": "testnet",
+    "Test net": "testnet", "mainnet.": "mainnet.",
 }
 
 
 def fix_names(text: str) -> str:
     for wrong, right in NAMES.items():
         text = text.replace(wrong, right)
-    return text
+    # Whisper sometimes starts a segment lowercase where a sentence began. Capitalising the first
+    # letter is a formatting fix to a word that was said, not a rewrite of it.
+    return text[:1].upper() + text[1:] if text else text
 
 
 def main() -> int:
