@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-19T10:59:49.624Z",
+ "generated_at": "2026-09-19T16:49:14.045Z",
  "source": "live agent tape",
  "policy": {
   "max_trade_pct_equity": 10,
@@ -518,6 +518,221 @@
    "tool": "mcp_clawpump_swap_execute",
    "ts": 1789812036,
    "written_at": 1789812036
+  },
+  {
+   "allowed": false,
+   "equity_source": "live",
+   "equity_usd": 15.88,
+   "hash": "5fb6c640e04c2cee320afe122e25bd362ebd6491d9b4a11f69c148b6e41de0f0",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 14.292882122080172,
+    "token": "SOL"
+   },
+   "memo_sig": "38zW4jr8us9kBrSZiQehgX3s66gqtbUw1UBgqMjzDkLPYSX7BA8v2MrfCXW5t9a6wyvu9Hhg7dcq3bbhwu3yQ3sF",
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "notional $14.29 > cap $1.59 (10.0% of equity)",
+   "rule": "trade_cap",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789828438,
+   "written_at": 1789828440
+  },
+  {
+   "allowed": true,
+   "equity_source": "live",
+   "equity_usd": 15.88,
+   "hash": "4ce74baa7273a2b94dd09540f5853df8a74790fb34439b6348a790d1628d7a6a",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 0.7940857188779821,
+    "token": "SOL"
+   },
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "within policy",
+   "rule": "",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789828440,
+   "written_at": 1789828440
+  },
+  {
+   "allowed": false,
+   "equity_source": "live",
+   "equity_usd": 15.88,
+   "hash": "0f5e13e8ec54add1c840d918d519b69a1627727afea116534b9ac57f7687b619",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 14.29438827231737,
+    "token": "SOL"
+   },
+   "memo_sig": "3fsx9VPb1LVVKerWnHrP6oVMRcr4gBDg1DLg6uzhELnp6RUjSN6vi4dJaye6pB758BrFLf4Cv1ftaB2H6HXX1ETj",
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "notional $14.29 > cap $1.59 (10.0% of equity)",
+   "rule": "trade_cap",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789828465,
+   "written_at": 1789828467
+  },
+  {
+   "allowed": true,
+   "equity_source": "live",
+   "equity_usd": 15.88,
+   "hash": "0882448ae981cb130e50bef49c37adf0ee2c57d1792a2d90f1f6c77d48d813bd",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 0.7941385270990174,
+    "token": "SOL"
+   },
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "within policy",
+   "rule": "",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789828468,
+   "written_at": 1789828468
+  },
+  {
+   "allowed": false,
+   "equity_source": "live",
+   "equity_usd": 15.86,
+   "hash": "34699938f06580c61944f8d0af4cb0866c7bca4ea9ae414999ff1fc09add4edb",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 14.273191223123275,
+    "token": "SOL"
+   },
+   "memo_sig": "5frsWJp8GVguUWt5kgYyUDWwWYtLHgQtRQQtyhUuryEVv3WjuJdH4gLBXtbn5vog7NgMNJ6ch4yAQw5JE3Zwoyf3",
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "notional $14.27 > cap $1.59 (10.0% of equity)",
+   "rule": "trade_cap",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789828596,
+   "written_at": 1789828599
+  },
+  {
+   "allowed": true,
+   "equity_source": "live",
+   "equity_usd": 15.86,
+   "hash": "efc987b50dff4a2e5b9916a8ce976450d6cea474956b93d847d62bfe48c4bf06",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 0.7929549934343527,
+    "token": "SOL"
+   },
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "within policy",
+   "rule": "",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789828599,
+   "written_at": 1789828599
+  },
+  {
+   "allowed": false,
+   "equity_source": "live",
+   "equity_usd": 15.85,
+   "hash": "553586fb158cadc7f51f15aaccd7766084a9999c7ceb861fc4fdb2d4a46a3e6d",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 14.263935528886954,
+    "token": "SOL"
+   },
+   "memo_sig": "GkuBsRDm7j3M75FeiQmRMwNsrk6M7vKZux5rg2ARVBHg5HbFLNmDihKMXpeoykHtQgThvR5ChSdG38iSW1rpb1W",
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "notional $14.26 > cap $1.58 (10.0% of equity)",
+   "rule": "trade_cap",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789829652,
+   "written_at": 1789829654
+  },
+  {
+   "allowed": true,
+   "equity_source": "live",
+   "equity_usd": 15.85,
+   "hash": "c8d7d1989c2e8621dfc17ec380dbb4a6c3cd09c69a7169933c427002ef1c90ed",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 0.7924407820446988,
+    "token": "SOL"
+   },
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "within policy",
+   "rule": "",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789829654,
+   "written_at": 1789829654
+  },
+  {
+   "allowed": false,
+   "equity_source": "live",
+   "equity_usd": 15.86,
+   "hash": "ede7d541feca7dc0e34cae2594804858d165ddc835bd6bc80a93730cadea57a2",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 14.27069899358439,
+    "token": "SOL"
+   },
+   "memo_sig": "EXV8kcKHUfBNFUPNh2FvsQCr89xGug7pJqaFUjTzuXm7UUJsJnACwg2uQhfqLE9D3aZTYdgtcTZRjTD8b4Zgcr6",
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "notional $14.27 > cap $1.59 (10.0% of equity)",
+   "rule": "trade_cap",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789836532,
+   "written_at": 1789836534
+  },
+  {
+   "allowed": true,
+   "equity_source": "live",
+   "equity_usd": 15.86,
+   "hash": "866711f81c194da3a2f5edfa382635c074632cba5805a2e0cd7eb1f70dce34fa",
+   "intent": {
+    "destination": null,
+    "kind": "swap",
+    "leverage": 1,
+    "market": "SOL",
+    "notional_usd": 0.7928469833045212,
+    "token": "SOL"
+   },
+   "mode": "enforce",
+   "policy_verified": true,
+   "reason": "within policy",
+   "rule": "",
+   "tool": "mcp_clawpump_swap_execute",
+   "ts": 1789836534,
+   "written_at": 1789836534
   }
  ]
 }
