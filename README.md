@@ -171,6 +171,9 @@ Stored at `~/.hermes/redline/policy.json`. Defaults:
 | `allowed_markets` | SOL, ETH | perps outside the list are refused |
 | `allowed_tokens` | SOL, USDC | swaps outside the list are refused |
 | `allowed_destinations` | none | transfers to anything else are refused |
+| `max_transfer_usd` | 0 | the allowlist says where funds may go; this says how much |
+| `max_spend_usd` | 1 | ceiling on a payment that is not a trade |
+| `max_daily_notional_pct_equity` | 300 | turnover in one UTC day, the runaway brake |
 | collateral withdrawals | always refused | operator-only, by design |
 | `refusal_cooldown` | 5 in 30 min | after repeated refusals, refuse everything for the window |
 | equity unreadable | refuse | fail closed |
@@ -209,7 +212,7 @@ the refusal cool-down, so observing cannot trip a limit that only enforcing shou
 | Capability | Status |
 |---|---|
 | **Policy engine** | Real. 38 unit tests, `tests/test_policy.py`, run in CI. |
-| **Stress tested against itself** | Real, 2026-09-19. 88 tests, including an adversarial suite (disguised tool names, NaN and negative and overflowing sizes, salami-sliced orders, boundary values) and a resilience suite (corrupt state, corrupt policy, unwritable home, a log that throws, a price source that dies, twelve parallel calls, a 400-call run). Four bypasses were found and closed, each one named in [INVARIANTS.md](INVARIANTS.md). |
+| **Stress tested against itself** | Real, 2026-09-19. 101 tests, including an adversarial suite (disguised tool names, NaN and negative and overflowing sizes, salami-sliced orders, boundary values) and a resilience suite (corrupt state, corrupt policy, unwritable home, a log that throws, a price source that dies, twelve parallel calls, a 400-call run). Five bypasses were found and closed, each one named in [INVARIANTS.md](INVARIANTS.md), including one the test suite had asserted as correct. |
 | **Installing it from scratch** | Real. Verified 2026-09-19 by installing from GitHub into an empty Hermes home: the scan passes, `hermes plugins validate` passes, `redline sign keygen` produces a key, a signed policy verifies, and changing one number in it makes the check fail. |
 | **Operator signatures** | Real. Ed25519 over the canonical policy; an altered policy refuses everything. `OperatorSignature` and `UnknownFields` in the suite. |
 | **Watching before enforcing** | Real. `ShadowMode` in the suite, and one watched order is on the public tape. |

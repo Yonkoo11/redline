@@ -1,6 +1,6 @@
 """Redline policy engine. Pure functions plus a small state store. Fails closed."""
 from __future__ import annotations
-import json, math, time
+import json, math, os, time
 from dataclasses import dataclass, field, fields, asdict
 from pathlib import Path
 from typing import Optional
@@ -87,6 +87,11 @@ class Policy:
     # pays a fee on each pass. The daily loss limit only notices once the losses land; this
     # notices the churn. Generous by default, because it is a runaway brake, not a strategy limit.
     max_daily_notional_pct_equity: float = 300.0
+    # The ceiling on a single transfer out. The allowlist says WHERE funds may go and says nothing
+    # about HOW MUCH, so one allowlisted address plus one transfer used to be the whole wallet.
+    # Zero by default, which matches the empty allowlist: an agent moves nothing until an operator
+    # decides otherwise, and then decides how much.
+    max_transfer_usd: float = 0.0
     # "enforce" blocks a failing order. "shadow" judges and records it but lets it through, so a
     # new policy can be watched before it is trusted. Signed along with the limits.
     mode: str = "enforce"
@@ -143,7 +148,27 @@ class State:
         return cls(**json.loads(p.read_text())) if p.exists() else cls()
 
     def save(self, path: Path) -> None:
-        Path(path).write_text(json.dumps(asdict(self), indent=1))
+        """Write via a temporary file and rename.
+
+        A plain write truncates first, so a crash or a full disk in the middle leaves a half
+        written file. That file then fails to parse, which refuses every call: safe, and also a
+        dead agent until someone notices. os.replace is atomic on the same filesystem, so a reader
+        sees either the old state or the new one and never a torn one."""
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(path.name + f".{os.getpid()}.tmp")
+        try:
+            with tmp.open("w") as fh:
+                json.dump(asdict(self), fh, indent=1)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp, path)
+        finally:
+            if tmp.exists():
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
 
 
 @dataclass
@@ -196,8 +221,17 @@ def evaluate(policy: Policy, state: State, intent: Intent,
 
 def _size_and_scope(policy: Policy, state: State, intent: Intent, equity_usd: float) -> Verdict:
     if intent.kind == "transfer":
-        ok = intent.destination in policy.allowed_destinations
-        return Verdict(ok, "destination allowed" if ok else f"destination {intent.destination} not on the allowlist", "destination")
+        if intent.destination not in policy.allowed_destinations:
+            return Verdict(False, f"destination {intent.destination} not on the allowlist", "destination")
+        if intent.notional_usd is None:
+            return Verdict(False, "could not price the transfer; refusing (fail closed)", "transfer_unpriced")
+        if not math.isfinite(intent.notional_usd) or intent.notional_usd < 0:
+            return Verdict(False, f"transfer amount {intent.notional_usd} is not a usable number", "bad_notional")
+        if intent.notional_usd > policy.max_transfer_usd:
+            return Verdict(False,
+                           f"transfer ${intent.notional_usd:.2f} > transfer limit ${policy.max_transfer_usd:.2f}",
+                           "transfer_cap")
+        return Verdict(True, "destination allowed and within the transfer limit")
     if intent.kind == "withdraw":
         return Verdict(False, "collateral withdrawals are operator-only", "withdraw")
     if intent.notional_usd is None:

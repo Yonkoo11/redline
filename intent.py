@@ -72,7 +72,14 @@ def intent_from_call(tool_name: str, args: dict, price: PriceFn) -> Optional[Int
         return None
     args = args or {}
     if kind == "transfer":
-        return Intent(kind, None, destination=str(_first(args, ("to", "destination", "recipient", "address")) or ""))
+        dest = str(_first(args, ("to", "destination", "recipient", "address")) or "")
+        # A transfer names its token and, on every tool checked on 2026-09-19, its amount in that
+        # token's smallest unit, the same as a swap. Unpriceable means refused, not unlimited.
+        sym = str(_first(args, ("token", "mint", "asset", "currency")) or "") or None
+        if sym:
+            sym = sym.upper()
+        usd = _notional(args, sym, price, raw_units=bool(sym)) if sym else None
+        return Intent(kind, usd, destination=dest, token=sym)
     if kind == "withdraw":
         return Intent(kind, None)
     if kind == "spend":

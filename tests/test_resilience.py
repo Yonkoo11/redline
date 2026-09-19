@@ -177,3 +177,87 @@ class SustainedRun(Harness):
         import json as _json
         state = _json.loads(redline.STATE_PATH.read_text())
         self.assertEqual(state["day_notional_usd"], 0.0)
+
+
+class DurableState(Harness):
+    """A half-written state file refuses every call, which is safe and also a dead agent."""
+
+    def test_the_state_file_is_never_left_half_written(self):
+        import json as _json
+        from redline.policy import State
+        st = State(high_water_usd=1.0, day_start_usd=1.0, day_key="2026-09-19")
+        for _ in range(60):
+            st.high_water_usd += 1
+            st.save(redline.STATE_PATH)
+            _json.loads(redline.STATE_PATH.read_text())     # raises if a reader could see a torn file
+
+    def test_no_temporary_files_are_left_behind(self):
+        from redline.policy import State
+        State().save(redline.STATE_PATH)
+        leftovers = [p.name for p in self.tmp.iterdir() if p.name.endswith(".tmp")]
+        self.assertEqual(leftovers, [])
+
+    def test_saving_into_a_directory_that_does_not_exist_yet_works(self):
+        from redline.policy import State
+        nested = self.tmp / "a" / "b" / "state.json"
+        State().save(nested)
+        self.assertTrue(nested.exists())
+
+
+class EquityCaching(unittest.TestCase):
+    """A reading is cached for a few seconds so a loop does not hammer the price source into
+    rate limiting, which would refuse every order. A failure is never cached."""
+
+    def setUp(self):
+        from redline import equity
+        self.eq = equity
+        equity.clear_cache()
+        self.calls = 0
+        self._sol, self._hold, self._px = equity.sol_balance, equity.token_holdings, equity.prices_usd
+
+    def tearDown(self):
+        self.eq.sol_balance, self.eq.token_holdings, self.eq.prices_usd = self._sol, self._hold, self._px
+        self.eq.clear_cache()
+
+    def test_repeated_reads_do_not_repeat_the_network_calls(self):
+        def sol(addr, rpc=None):
+            self.calls += 1
+            return 1.0
+        self.eq.sol_balance = sol
+        self.eq.token_holdings = lambda addr, rpc=None: {}
+        self.eq.prices_usd = lambda mints: {self.eq.SOL_MINT: 100.0}
+        for _ in range(25):
+            self.eq.wallet_equity_usd("wallet")
+        self.assertEqual(self.calls, 1)
+
+    def test_a_failure_is_not_cached(self):
+        def boom(addr, rpc=None):
+            self.calls += 1
+            raise ConnectionError("rpc down")
+        self.eq.sol_balance = boom
+        for _ in range(5):
+            with self.assertRaises(ConnectionError):
+                self.eq.wallet_equity_usd("wallet")
+        self.assertEqual(self.calls, 5, "an outage must be retried, never remembered as a value")
+
+
+class SeparateProcesses(Harness):
+    """Two Hermes processes share one state file. Neither may see a torn one."""
+
+    def test_parallel_processes_keep_the_state_file_parseable(self):
+        import json as _json
+        import subprocess
+        import sys as _sys
+        code = (
+            "import json,sys,os;"
+            "sys.path.insert(0, %r);"
+            "from redline.policy import State;"
+            "p=%r;"
+            "[State(high_water_usd=float(i)).save(p) for i in range(150)]"
+            % (str(pathlib.Path(redline.__file__).resolve().parents[1]), str(redline.STATE_PATH))
+        )
+        procs = [subprocess.Popen([_sys.executable, "-c", code]) for _ in range(4)]
+        for p in procs:
+            p.wait()
+        _json.loads(redline.STATE_PATH.read_text())
+        self.assertEqual([f.name for f in self.tmp.iterdir() if f.name.endswith(".tmp")], [])

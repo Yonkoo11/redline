@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import time
 import urllib.request
 from typing import Optional
 
@@ -43,6 +44,19 @@ DUST_UI_AMOUNT = 1e-9
 
 _UA = {"User-Agent": "redline/0.2 (+https://useredline.xyz)"}   # Jupiter 403s Python's default
 
+# Every governed call reads a balance, its token accounts and a price. An agent in a loop would
+# make three network round trips per tool call, which is slow and is how a price source starts
+# rate limiting, and a rate limited price source refuses every order. A few seconds of cache keeps
+# the reading honest (equity does not move meaningfully in that window) and keeps the agent alive.
+CACHE_SECONDS = float(os.environ.get("REDLINE_EQUITY_CACHE_SECONDS", "5"))
+HTTP_TIMEOUT = float(os.environ.get("REDLINE_HTTP_TIMEOUT", "8"))
+_cache: dict = {}
+
+
+def clear_cache() -> None:
+    """Drop the cached reading. Used by tests, and by anything that must not trust a stale one."""
+    _cache.clear()
+
 
 class Unpriceable(RuntimeError):
     """The wallet holds something this reader cannot value. Refuse rather than under-count."""
@@ -53,7 +67,7 @@ def _rpc(method: str, params: list, rpc: str = RPC) -> dict:
         rpc,
         data=json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode(),
         headers={"content-type": "application/json", **_UA})
-    with urllib.request.urlopen(req, timeout=15) as r:
+    with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as r:
         body = json.load(r)
     if "error" in body:
         raise RuntimeError(f"rpc {method}: {body['error']}")
@@ -95,7 +109,7 @@ def _jupiter(ids: list[str]) -> dict:
     for host in ("https://lite-api.jup.ag", "https://api.jup.ag"):
         try:
             req = urllib.request.Request(f"{host}/price/v3?ids={','.join(ids)}", headers=_UA)
-            with urllib.request.urlopen(req, timeout=15) as r:
+            with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as r:
                 return json.load(r)
         except Exception as exc:
             last = exc
@@ -118,9 +132,16 @@ def price_usd(symbol: str) -> Optional[float]:
 
 
 def wallet_equity_usd(addr: str = AGENT, rpc: str = RPC) -> float:
-    """Raises on any failure. The policy treats an exception as unreadable and refuses."""
+    """Raises on any failure. The policy treats an exception as unreadable and refuses.
+
+    A failure is never cached, so an outage means every call retries and every call refuses, which
+    is the behaviour wanted. Only a good reading is held, and only briefly."""
     if not addr:
         raise RuntimeError("REDLINE_AGENT_WALLET not set")
+
+    hit = _cache.get(addr)
+    if hit and (time.monotonic() - hit[0]) < CACHE_SECONDS:
+        return hit[1]
 
     sol = sol_balance(addr, rpc)
     holdings = token_holdings(addr, rpc)
@@ -145,4 +166,5 @@ def wallet_equity_usd(addr: str = AGENT, rpc: str = RPC) -> float:
         raise Unpriceable(
             "wallet holds a token with no price: " + ", ".join(sorted(missing)[:3]) +
             ". Refusing rather than reporting equity that is known to be too low.")
+    _cache[addr] = (time.monotonic(), total)
     return total

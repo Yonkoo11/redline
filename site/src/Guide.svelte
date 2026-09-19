@@ -102,6 +102,20 @@
       does: "Refused. An empty allowlist means no transfers at all.",
       do: "If the address is genuinely yours, add it on the policy page and re-sign. If it is not, you have just watched the guardrail do the thing you installed it for.",
     },
+    {
+      rule: "transfer_cap",
+      says: "transfer $X > transfer limit $Y",
+      means: "The destination is on your list, and the amount is above what you allowed to leave in one go.",
+      does: "Refused before anything moved.",
+      do: "The address list says where funds may go and says nothing about how much. Without a separate limit, one allowed address is the whole wallet, which is why this starts at zero. Raise it to the largest single transfer you would want to happen while you are asleep.",
+    },
+    {
+      rule: "transfer_unpriced",
+      says: "could not price the transfer",
+      means: "A transfer was attempted without an amount Redline could value, so no limit could be applied.",
+      does: "Refused.",
+      do: "Nothing to change on your side. An unpriceable transfer is refused rather than treated as unlimited.",
+    },
   ];
 </script>
 

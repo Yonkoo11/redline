@@ -57,10 +57,39 @@ class Fixture(unittest.TestCase):
         v = evaluate(self.p, self.s, Intent("withdraw", None), 100.0, NOW)
         self.assertEqual(v.rule, "withdraw")
 
-    def test_transfer_allowlist(self):
+    def test_transfer_to_an_address_not_on_the_allowlist_is_refused(self):
         self.p.allowed_destinations = ["OK1"]
-        self.assertTrue(evaluate(self.p, self.s, Intent("transfer", None, destination="OK1"), 100.0, NOW).allowed)
-        self.assertFalse(evaluate(self.p, self.s, Intent("transfer", None, destination="BAD"), 100.0, NOW).allowed)
+        v = evaluate(self.p, self.s, Intent("transfer", 1.0, destination="BAD"), 100.0, NOW)
+        self.assertFalse(v.allowed)
+        self.assertEqual(v.rule, "destination")
+
+    def test_an_allowlisted_destination_is_not_a_blank_cheque(self):
+        """The allowlist says where funds may go. It never said how much, and one transfer to a
+        trusted address used to be the entire wallet."""
+        self.p.allowed_destinations = ["OK1"]
+        self.p.max_transfer_usd = 25.0
+        v = evaluate(self.p, self.s, Intent("transfer", 100.0, destination="OK1"), 100.0, NOW)
+        self.assertFalse(v.allowed)
+        self.assertEqual(v.rule, "transfer_cap")
+
+    def test_a_transfer_within_the_limit_passes(self):
+        self.p.allowed_destinations = ["OK1"]
+        self.p.max_transfer_usd = 25.0
+        self.assertTrue(evaluate(self.p, self.s, Intent("transfer", 10.0, destination="OK1"), 100.0, NOW).allowed)
+
+    def test_transfers_are_off_until_an_operator_sets_a_limit(self):
+        """Default zero, to match the default empty allowlist."""
+        self.p.allowed_destinations = ["OK1"]
+        v = evaluate(self.p, self.s, Intent("transfer", 0.01, destination="OK1"), 100.0, NOW)
+        self.assertFalse(v.allowed)
+        self.assertEqual(v.rule, "transfer_cap")
+
+    def test_an_unpriceable_transfer_is_refused(self):
+        self.p.allowed_destinations = ["OK1"]
+        self.p.max_transfer_usd = 25.0
+        v = evaluate(self.p, self.s, Intent("transfer", None, destination="OK1"), 100.0, NOW)
+        self.assertFalse(v.allowed)
+        self.assertEqual(v.rule, "transfer_unpriced")
 
     def test_cooldown_after_repeated_refusals(self):
         for i in range(5):
@@ -432,10 +461,12 @@ class EquityCountsEverything(unittest.TestCase):
     def setUp(self):
         from redline import equity
         self.eq = equity
+        equity.clear_cache()          # a reading is cached for a few seconds; tests must not share one
         self._sol, self._hold, self._px = equity.sol_balance, equity.token_holdings, equity.prices_usd
 
     def tearDown(self):
         self.eq.sol_balance, self.eq.token_holdings, self.eq.prices_usd = self._sol, self._hold, self._px
+        self.eq.clear_cache()
 
     def _wallet(self, sol, holdings, prices):
         self.eq.sol_balance = lambda addr, rpc=None: sol
