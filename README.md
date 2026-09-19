@@ -2,7 +2,7 @@
 
 # Redline
 
-![policy tests](https://img.shields.io/badge/policy_tests-116%2F116_passing-3fb950)
+![policy tests](https://img.shields.io/badge/policy_tests-125%2F125_passing-3fb950)
 [![tests](https://github.com/Yonkoo11/redline/actions/workflows/tests.yml/badge.svg)](https://github.com/Yonkoo11/redline/actions/workflows/tests.yml)
 ![runtime](https://img.shields.io/badge/Hermes_runtime_dispatch-4%2F4_cases_pass-121212)
 ![tape](https://img.shields.io/badge/on--chain_refusal-mainnet_confirmed-121212)
@@ -10,7 +10,7 @@
 
 ### Kill switch for claw traders.
 
-**Redline is a Hermes plugin that holds a ClawPump trading agent under a policy its operator wrote. Every order the agent tries passes the policy or is refused, and a refusal is written to Solana as a memo carrying the record's hash. Today: 116 tests green, the real Hermes runtime dispatching through it, and a refusal decided from live on-chain equity and recorded on Solana mainnet.**
+**Redline is a Hermes plugin that holds a ClawPump trading agent under a policy its operator wrote. Every order the agent tries passes the policy or is refused, and a refusal is written to Solana as a memo carrying the record's hash. Today: 125 tests green, the real Hermes runtime dispatching through it, and a refusal decided from live on-chain equity and recorded on Solana mainnet.**
 
 **[ Live ↗ ](https://useredline.xyz/)** · **[ Verify it yourself ↗ ](#verify-it-yourself-in-60-seconds)** · **[ The receipt ↗ ](https://solscan.io/tx/2pFTPkGoK4y3yPkdMZ5EQd3FYnGjTNv2qwdsoBmkrzGKq2fbvQDq6eGVRQvU2Rx58WF2qfLku5sV7R5YMVZHQe29)** · **[ @useredline ↗ ](https://x.com/useredline)**
 
@@ -101,7 +101,7 @@ No key, no wallet, no chain access needed for the first two checks. Every line b
 
 ```bash
 git clone https://github.com/Yonkoo11/redline   # stay in this directory: the clone IS the package
-python3 -m unittest discover -s redline/tests -t .  # → Ran 116 tests ... OK
+python3 -m unittest discover -s redline/tests -t .  # → Ran 125 tests ... OK
 python3 -c "from redline.policy import *; print(evaluate(Policy(verified=True), State(), Intent('perp', 12.0, market='SOL'), 100.0, 0).reason)"
                                                     # → notional $12.00 > cap $10.00 (10.0% of equity)
 # with Hermes v2026.9.14+ installed and the plugin linked into ~/.hermes/plugins/redline:
@@ -212,7 +212,7 @@ the refusal cool-down, so observing cannot trip a limit that only enforcing shou
 
 | Capability | Status |
 |---|---|
-| **Policy engine** | Real. 48 unit tests in `tests/test_policy.py`, 116 across the suite, run in CI. |
+| **Policy engine** | Real. 48 unit tests in `tests/test_policy.py`, 125 across the suite, run in CI. |
 | **Stress tested against itself** | Real, 2026-09-19, twice. The second pass found three things review had not. **A swap of one SOL, sixty times the per-order cap, was allowed when the caller added `notional_usd: 0.5` beside the real `amount`**: the engine read the caller's own dollar figure instead of the field the venue executes, and the live `swap_execute` schema carries no `additionalProperties: false`, so the extra key is accepted and ignored and the whole SOL moves. **Nine tools that move value were ungoverned**, among them `predictions_open` ("Places a bet on a specific outcome") and `agent_card_create` ("create/buy a card"); the classifier is now checked against all 132 live tools and the platform's own `readOnly` and `destructive` flags. **`mcp_swap_execute` was invisible**, because the prefix stripper assumed three segments. All three fixed, each with tests. Plus an adversarial suite (disguised tool names, NaN and negative and overflowing sizes, salami-sliced orders, boundary values) and a resilience suite (corrupt state, corrupt policy, unwritable home, a log that throws, a price source that dies, twelve parallel calls, a 400-call run). Five bypasses were found and closed, each one named in [INVARIANTS.md](INVARIANTS.md), including one the test suite had asserted as correct. |
 | **Installing it from scratch** | Real. Verified 2026-09-19 by installing from GitHub into an empty Hermes home: the scan passes, `hermes plugins validate` passes, `redline sign keygen` produces a key, a signed policy verifies, and changing one number in it makes the check fail. |
 | **Operator signatures** | Real. Ed25519 over the canonical policy; an altered policy refuses everything. `OperatorSignature` and `UnknownFields` in the suite. |
@@ -227,7 +227,7 @@ the refusal cool-down, so observing cannot trip a limit that only enforcing shou
 | Phoenix perps | Not available to this account. `perps_account` returns no registered trader, and registration is a private beta the backend controls. The venue path today is spot swaps through Jupiter. |
 | Pair-trading strategy (SOL against ETH) | Not built. |
 | Referee mode for hosted ClawPump agents | Not claimed, anywhere in this repository. Hosted agents cannot load a plugin. |
-| **Clearing a halt by editing the state file** | Possible, and measured in `tests/test_state_tampering.py`. The policy is signed, so an agent cannot raise a limit and cannot get an over-cap order through: the cap is computed from the signed policy and equity read live from chain. The state file is not signed, so an agent that can write `~/.hermes/redline/state.json` can clear a latched drawdown halt or a cooldown. Deriving both from the tape, whose refusals are anchored on chain, is the fix and is not done. |
+| **Clearing a halt by editing the state file** | Closed 2026-09-19, and measured both ways in `tests/test_state_tampering.py`. The state file is not signed, so it used to be enough to set `halted` to false. Fixing that flag alone would have been theatre: lowering `high_water_usd` to today's equity escapes the same halt one field earlier, and the same trick works on `day_start_usd` and on `day_notional_usd`. All four are re-derived on load from the tape, which is append-only and whose refusals each carry a memo on Solana, so clearing a halt now means rewriting a record anchored on chain in public. The reconciliation can only ever tighten, never loosen, which is what makes it safe to read a file that sits in the same directory as the state: a tape that is missing, torn or rewritten downward cannot weaken anything. Only decisions taken against a live balance are read, so a test fixture cannot move a real limit. |
 | Realised trading performance | Not claimed. One swap of $0.80 has filled, fired by the gate to prove the allowed half reaches a venue. It was not a strategy's decision, and no profit or loss is claimed from it. |
 
 ## Tech stack
@@ -265,7 +265,7 @@ cd site && npm install && npm run dev                             # the tape pag
 ## Tests
 
 ```bash
-python3 -m unittest discover -s redline/tests -t .   # → Ran 116 tests ... OK
+python3 -m unittest discover -s redline/tests -t .   # → Ran 125 tests ... OK
 ```
 
 They cover every rule in the policy table, the intent mapping for both ClawPump MCP prefixes, the block return shape, the tape record, and fail-closed behaviour when equity cannot be read. CI runs them on every push: `.github/workflows/tests.yml`.

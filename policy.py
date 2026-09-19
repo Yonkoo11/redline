@@ -182,9 +182,13 @@ class State:
     halt_reason: str = ""
 
     @classmethod
-    def load(cls, path: Path) -> "State":
+    def load(cls, path: Path, tape: Optional[Path] = None) -> "State":
         p = Path(path)
-        return cls(**json.loads(p.read_text())) if p.exists() else cls()
+        state = cls(**json.loads(p.read_text())) if p.exists() else cls()
+        tape = Path(tape) if tape is not None else p.with_name("tape.jsonl")
+        if tape.exists():
+            reconcile_with_tape(state, tape)
+        return state
 
     def save(self, path: Path) -> None:
         """Write via a temporary file and rename.
@@ -208,6 +212,87 @@ class State:
                     tmp.unlink()
                 except OSError:
                     pass
+
+
+# Operator actions, which are decisions rather than orders, and never count as refusals.
+_OPERATOR_RULES = ("halt_clear", "day_reset")
+
+
+def reconcile_with_tape(state: "State", tape_path) -> "State":
+    """Cross-check the state file against the tape, and take the stricter of the two.
+
+    The policy is signed, so an agent cannot raise a limit. The state file is not signed, and
+    until this existed an agent that could write it could clear a latched drawdown halt or a
+    cooldown and carry on. Fixing the `halted` flag alone would have been theatre: lowering
+    `high_water_usd` to today's equity escapes the same halt one field earlier, and the same goes
+    for `day_start_usd` against the daily loss limit and `day_notional_usd` against turnover.
+
+    So all of them are re-derived from the tape, which is append-only and whose refusals each
+    carry a memo on Solana. Clearing a halt now means rewriting a record that is anchored on
+    chain, in public.
+
+    The one rule this function obeys: **it can only ever tighten.** Every field moves toward
+    refusing more, never less. A tape that is missing, truncated or corrupt therefore cannot
+    weaken anything, which matters because the tape sits in the same directory as the state and
+    is no harder to attack. Only decisions taken against a live balance are read; a test that
+    hands the plugin a fixture balance must not be able to move a real limit.
+    """
+    rows = []
+    try:
+        for line in Path(tape_path).read_text().splitlines():
+            if not line.strip():
+                continue
+            try:
+                rows.append(json.loads(line))
+            except ValueError:
+                continue                      # a torn line is skipped, never fatal
+    except OSError:
+        return state
+
+    live = [r for r in rows if isinstance(r, dict) and r.get("equity_source") == "live"]
+    ts = lambda r: float(r.get("ts") or 0)
+
+    cleared_at = max((ts(r) for r in rows if r.get("rule") == "halt_clear"), default=0.0)
+
+    # A latched halt is sticky until an operator clears it, and clearing writes a record.
+    for r in live:
+        if r.get("rule") == "drawdown" and ts(r) > cleared_at and not state.halted:
+            state.halted = True
+            state.halt_reason = str(r.get("reason") or "drawdown (recovered from the tape)")
+
+    def equity(r):
+        v = r.get("equity_usd")
+        return float(v) if isinstance(v, (int, float)) and math.isfinite(float(v)) else None
+
+    since_clear = [e for r in live if ts(r) > cleared_at for e in (equity(r),) if e is not None]
+    if since_clear:
+        state.high_water_usd = max(state.high_water_usd, max(since_clear))
+
+    today = _day_key(time.time())
+    todays = [r for r in live if _day_key(ts(r)) == today]
+    reset = max((r for r in todays if r.get("rule") == "day_reset"), key=ts, default=None)
+    opening = equity(reset) if reset is not None else next(
+        (e for r in todays for e in (equity(r),) if e is not None), None)
+    if opening is not None:
+        if state.day_key != today:
+            state.day_key, state.day_start_usd = today, opening
+        else:
+            state.day_start_usd = max(state.day_start_usd, opening)
+        after = ts(reset) if reset is not None else 0.0
+        # The size lives inside the record's intent, not at its top level.
+        turnover = sum(float((r.get("intent") or {}).get("notional_usd") or 0) for r in todays
+                       if r.get("allowed") and ts(r) > after)
+        state.day_notional_usd = max(state.day_notional_usd, turnover)
+
+    seen = {round(t, 3) for t in state.refusals}
+    for r in live:
+        if r.get("allowed") is False and r.get("rule") not in _OPERATOR_RULES:
+            t = ts(r)
+            if t and round(t, 3) not in seen:
+                seen.add(round(t, 3))
+                state.refusals.append(t)
+    state.refusals = sorted(state.refusals)[-200:]
+    return state
 
 
 @dataclass
