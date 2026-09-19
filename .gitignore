@@ -79,3 +79,4 @@ ENTRY-POST.md
 # install, and a 200-token JSON blob trips a credential detector on a base58 string.
 probe/clawpump-tokens-2026-09-18.json
 proposals/
+COPY-PASTE.md
